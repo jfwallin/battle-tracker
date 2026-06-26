@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Load Encounter — Encounter Engine{% endblock %}
+{% block body_class %}setup-page{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+  <h1>&#9876; Encounter Engine</h1>
+  <p class="subtitle">D&amp;D 5e Combat Tracker</p>
+
+  {% if has_saved %}
+  <div class="card resume-card">
+    <h2>Resume Encounter</h2>
+    <p>Saved encounter found from <strong>{{ saved_source }}</strong></p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="resumeEncounter()">Resume</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('load-section').style.display='block'; this.parentElement.parentElement.style.display='none'">Load New Instead</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card" id="load-section" {% if has_saved %}style="display:none"{% endif %}>
+    <h2>Load Excel Workbook</h2>
+    <p>Select your encounter workbook. The <strong>Battle List</strong> sheet defines the roster; each NPC Source tab provides stats.</p>
+    <div class="field-row">
+      <label for="excel-path">Workbook path</label>
+      <input type="text" id="excel-path" placeholder="C:\path\to\combat tracker.xlsx" class="path-input">
+      <button class="btn btn-secondary" onclick="browseFile()">Browse</button>
+    </div>
+    <div id="load-error" class="error-msg" style="display:none"></div>
+    <button class="btn btn-primary" onclick="loadExcel()">Load Workbook</button>
+  </div>
+
+  <div id="roster-section" style="display:none">
+    <div class="card">
+      <h2>Roster Preview</h2>
+      <div id="roster-table-container"></div>
+    </div>
+
+    <div class="card">
+      <h2>Initiative Setup</h2>
+      <div id="initiative-controls">
+        <button class="btn btn-secondary" onclick="rollInitiative('npcs')">Roll NPC Initiative</button>
+        <button class="btn btn-secondary" onclick="rollInitiative('pcs')">Roll PC Initiative</button>
+        <button class="btn btn-ghost" onclick="rollInitiative('all')">Roll All</button>
+      </div>
+      <div id="initiative-list"></div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-primary btn-large" onclick="startEncounter()">Start Encounter &#9654;</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let _enc = null;
+
+async function resumeEncounter() {
+  const r = await fetch('/api/resume', { method: 'POST' });
+  const data = await r.json();
+  if (data.ok) {
+    window.location.href = '/encounter';
+  } else {
+    alert(data.error || 'Could not resume');
+  }
+}
+
+async function loadExcel() {
+  const path = document.getElementById('excel-path').value.trim();
+  const errEl = document.getElementById('load-error');
+  errEl.style.display = 'none';
+  if (!path) { errEl.textContent = 'Please enter a file path.'; errEl.style.display = 'block'; return; }
+
+  const r = await fetch('/api/load-excel', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ path })
+  });
+  const data = await r.json();
+  if (!data.ok) {
+    errEl.textContent = data.error || 'Load failed';
+    errEl.style.display = 'block';
+    return;
+  }
+  _enc = data.encounter;
+  renderRoster();
+  document.getElementById('roster-section').style.display = 'block';
+}
+
+function browseFile() {
+  // Can't open a native dialog from browser — show helper text
+  const el = document.getElementById('excel-path');
+  if (!el.value) {
+    el.value = 'C:\\Users\\jwallin\\OneDrive\\dnd - elemental crown\\battle tracker\\combat tracker.xlsx';
+    el.select();
+  }
+}
+
+function renderRoster() {
+  const container = document.getElementById('roster-table-container');
+  if (!_enc || !_enc.combatants) { container.innerHTML = '<p>No combatants loaded.</p>'; return; }
+
+  let html = '<table class="roster-table"><thead><tr><th>Type</th><th>Name</th><th>Source</th><th>AC</th><th>Max HP</th><th>Initiative</th><th>Init Mod</th><th>Mode</th></tr></thead><tbody>';
+  for (const id of _enc.order) {
+    const c = _enc.combatants[id];
+    html += `<tr>
+      <td><span class="type-pill type-${c.combatant_type.toLowerCase()}">${c.combatant_type}</span></td>
+      <td>${c.name}${c.is_group ? ' <span class="group-badge">group</span>' : ''}</td>
+      <td>${c.source_tab || '—'}</td>
+      <td>${c.ac ?? '—'}</td>
+      <td>${c.max_hp ?? '—'}</td>
+      <td><input type="number" class="init-input" value="${c.initiative ?? ''}" placeholder="—"
+           onchange="setInit('${id}', this.value)" style="width:55px"></td>
+      <td>${c.initiative_mod >= 0 ? '+' : ''}${c.initiative_mod}</td>
+      <td>${c.initiative_mode}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+  renderInitiativeList();
+}
+
+async function setInit(cid, val) {
+  if (!val) return;
+  const r = await fetch('/api/initiative/set', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ combatant_id: cid, value: parseInt(val) })
+  });
+  const data = await r.json();
+  if (data.ok) { _enc = data.encounter; renderInitiativeList(); }
+}
+
+async function rollInitiative(scope) {
+  const r = await fetch('/api/initiative/roll', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ scope })
+  });
+  const data = await r.json();
+  if (data.ok) { _enc = data.encounter; renderRoster(); }
+}
+
+function renderInitiativeList() {
+  const el = document.getElementById('initiative-list');
+  if (!_enc) return;
+  const sorted = [..._enc.order].sort((a, b) => {
+    const ia = _enc.combatants[a].initiative ?? -999;
+    const ib = _enc.combatants[b].initiative ?? -999;
+    return ib - ia;
+  });
+  let html = '<ol class="init-order">';
+  for (const id of sorted) {
+    const c = _enc.combatants[id];
+    const init = c.initiative != null ? c.initiative : '—';
+    html += `<li><span class="init-num">${init}</span> ${c.name}</li>`;
+  }
+  html += '</ol>';
+  el.innerHTML = html;
+}
+
+async function startEncounter() {
+  const r = await fetch('/api/initiative/sort', { method: 'POST' });
+  const data = await r.json();
+  if (data.ok) {
+    window.location.href = '/encounter';
+  }
+}
+</script>
+{% endblock %}

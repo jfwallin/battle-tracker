@@ -1,0 +1,610 @@
+{
+  "round": 1,
+  "turn_index": 0,
+  "order": [
+    "f8eb9c67",
+    "9aa06f5f",
+    "ec5a1a94",
+    "b5209d08",
+    "b2df1b93",
+    "32e02fe9",
+    "9fdf72d7",
+    "ba2eb0dd"
+  ],
+  "combatants": {
+    "f8eb9c67": {
+      "id": "f8eb9c67",
+      "name": "Rex",
+      "combatant_type": "PC",
+      "source_tab": "Rex",
+      "initiative": 15,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    },
+    "32e02fe9": {
+      "id": "32e02fe9",
+      "name": "Prag",
+      "combatant_type": "PC",
+      "source_tab": "Prag",
+      "initiative": 6,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    },
+    "ba2eb0dd": {
+      "id": "ba2eb0dd",
+      "name": "Roquist",
+      "combatant_type": "PC",
+      "source_tab": "Roquist",
+      "initiative": 2,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    },
+    "ec5a1a94": {
+      "id": "ec5a1a94",
+      "name": "Giggles",
+      "combatant_type": "PC",
+      "source_tab": "Giggles",
+      "initiative": 13,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    },
+    "b2df1b93": {
+      "id": "b2df1b93",
+      "name": "Shaddow",
+      "combatant_type": "PC",
+      "source_tab": "Shaddow",
+      "initiative": 8,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    },
+    "b5209d08": {
+      "id": "b5209d08",
+      "name": "Korrum",
+      "combatant_type": "NPC",
+      "source_tab": "Korrum",
+      "initiative": 12,
+      "initiative_mod": -1,
+      "ac": 18,
+      "max_hp": 285,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [
+        {
+          "name": "Name",
+          "attack_type": "Type",
+          "to_hit": null,
+          "reach": "Reach / Range",
+          "damage_dice": [],
+          "save_dc": null,
+          "save_ability": "",
+          "effect": "Effect"
+        },
+        {
+          "name": "Slam",
+          "attack_type": "Melee Weapon",
+          "to_hit": 11,
+          "reach": "10 ft.",
+          "damage_dice": [
+            {
+              "n": 3,
+              "die": 8,
+              "bonus": 7,
+              "damage_type": "bludgeoning"
+            }
+          ],
+          "save_dc": 17,
+          "save_ability": "STR",
+          "effect": "On hit, target pushed 10 ft. or knocked prone (DC 17 STR save)."
+        },
+        {
+          "name": "Boulder Hurl",
+          "attack_type": "Ranged Weapon",
+          "to_hit": 11,
+          "reach": "60/180 ft.",
+          "damage_dice": [
+            {
+              "n": 3,
+              "die": 10,
+              "bonus": 7,
+              "damage_type": "bludgeoning"
+            }
+          ],
+          "save_dc": 17,
+          "save_ability": "STR",
+          "effect": "If target is flying, DC 17 STR save or pushed 20 ft. and flying speed halved until start of its next turn."
+        }
+      ],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 3,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "30 ft., burrow 30 ft.",
+      "size_type_alignment": "Huge elemental, neutral",
+      "proficiency_bonus": 4,
+      "ability_scores": {
+        "STR": 24,
+        "DEX": 8,
+        "CON": 22,
+        "INT": 8,
+        "WIS": 13,
+        "CHA": 11
+      },
+      "ability_mods": {
+        "STR": 7,
+        "DEX": -1,
+        "CON": 6,
+        "INT": -1,
+        "WIS": 1,
+        "CHA": 0
+      },
+      "save_bonuses": {
+        "STR": 11,
+        "DEX": -1,
+        "CON": 10,
+        "INT": -1,
+        "WIS": 5,
+        "CHA": 0
+      },
+      "resistances": "bludgeoning, piercing, slashing from nonmagical attacks",
+      "immunities": "poison",
+      "condition_immunities": "exhaustion, paralyzed, petrified, poisoned, unconscious",
+      "senses": "darkvision 60 ft., tremorsense 60 ft., passive Perception 11",
+      "traits": [
+        {
+          "name": "Name",
+          "desc": "Description"
+        },
+        {
+          "name": "Earth Glide",
+          "desc": "Korrum can burrow through nonmagical, unworked earth and stone without disturbing it."
+        },
+        {
+          "name": "Siege Monster",
+          "desc": "Korrum deals double damage to objects and structures."
+        },
+        {
+          "name": "Elemental Command: Stone Pressure",
+          "desc": "While Korrum lives, each elemental flank deals +10 damage during flank resolution."
+        },
+        {
+          "name": "Legendary Resistance (1/day)",
+          "desc": "If Korrum fails a saving throw, it can choose to succeed instead."
+        }
+      ],
+      "actions": [
+        {
+          "name": "Name",
+          "desc": "Recharge / Uses"
+        },
+        {
+          "name": "Multiattack",
+          "desc": "\u2014"
+        },
+        {
+          "name": "Grasping Earth",
+          "desc": "Recharge 5\u20136"
+        }
+      ],
+      "bonus_actions": [
+        {
+          "name": "Name",
+          "desc": "Recharge / Uses"
+        },
+        {
+          "name": "Stone Spire",
+          "desc": "\u2014"
+        },
+        {
+          "name": "Stone Renewal",
+          "desc": "2x/day"
+        }
+      ],
+      "reactions": [
+        {
+          "name": "Name",
+          "desc": "Trigger"
+        },
+        {
+          "name": "Stone Backlash",
+          "desc": "Hit by a ranged or spell attack from a creature within 120 ft."
+        }
+      ],
+      "bloodied_effects": [
+        {
+          "name": "Name",
+          "desc": "Trigger"
+        },
+        {
+          "name": "Shardfall",
+          "desc": "First reduced below \u00bd HP"
+        }
+      ]
+    },
+    "9aa06f5f": {
+      "id": "9aa06f5f",
+      "name": "Veyrath",
+      "combatant_type": "NPC",
+      "source_tab": "Veyrath",
+      "initiative": 15,
+      "initiative_mod": 6,
+      "ac": 17,
+      "max_hp": 240,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [
+        {
+          "name": "Name",
+          "attack_type": "Type",
+          "to_hit": null,
+          "reach": "Reach / Range",
+          "damage_dice": [],
+          "save_dc": null,
+          "save_ability": "",
+          "effect": "Effect"
+        },
+        {
+          "name": "Burning Touch",
+          "attack_type": "Melee Weapon",
+          "to_hit": 10,
+          "reach": "5 ft.",
+          "damage_dice": [
+            {
+              "n": 2,
+              "die": 8,
+              "bonus": 6,
+              "damage_type": "fire"
+            }
+          ],
+          "save_dc": null,
+          "save_ability": "",
+          "effect": "Target ignites: until a creature uses an action to extinguish, it takes 1d8 fire at the start of each of its turns. This ongoing damage does not stack."
+        },
+        {
+          "name": "Ember Lance",
+          "attack_type": "Ranged Spell",
+          "to_hit": 10,
+          "reach": "120 ft.",
+          "damage_dice": [
+            {
+              "n": 3,
+              "die": 8,
+              "bonus": 6,
+              "damage_type": "fire"
+            }
+          ],
+          "save_dc": null,
+          "save_ability": "",
+          "effect": "If the target is concentrating, the concentration save DC is at least 12."
+        }
+      ],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 3,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "50 ft.",
+      "size_type_alignment": "Large elemental, neutral",
+      "proficiency_bonus": 4,
+      "ability_scores": {
+        "STR": 12,
+        "DEX": 22,
+        "CON": 20,
+        "INT": 10,
+        "WIS": 14,
+        "CHA": 16
+      },
+      "ability_mods": {
+        "STR": 1,
+        "DEX": 6,
+        "CON": 5,
+        "INT": 0,
+        "WIS": 2,
+        "CHA": 3
+      },
+      "save_bonuses": {
+        "STR": 1,
+        "DEX": 10,
+        "CON": 9,
+        "INT": 0,
+        "WIS": 2,
+        "CHA": 7
+      },
+      "resistances": "bludgeoning, piercing, slashing from nonmagical attacks",
+      "immunities": "fire, poison",
+      "condition_immunities": "exhaustion, grappled, paralyzed, petrified, poisoned, prone, restrained, unconscious",
+      "senses": "darkvision 60 ft., passive Perception 12",
+      "traits": [
+        {
+          "name": "Name",
+          "desc": "Description"
+        },
+        {
+          "name": "Fire Form",
+          "desc": "Veyrath can move through a space as narrow as 1 inch wide without squeezing. A creature that touches Veyrath or hits it with a melee attack while within 5 ft. takes 5 fire damage, no more than once per creature per round."
+        },
+        {
+          "name": "Illumination",
+          "desc": "Veyrath sheds bright light in a 30-ft. radius and dim light for another 30 ft."
+        },
+        {
+          "name": "Elemental Command: Flame Pressure",
+          "desc": "While Veyrath lives, each hobgoblin flank takes +10 fire attrition during flank resolution."
+        },
+        {
+          "name": "Legendary Resistance (1/day)",
+          "desc": "If Veyrath fails a saving throw, it can choose to succeed instead."
+        }
+      ],
+      "actions": [
+        {
+          "name": "Name",
+          "desc": "Recharge / Uses"
+        },
+        {
+          "name": "Multiattack",
+          "desc": "\u2014"
+        },
+        {
+          "name": "Thermal Updraft",
+          "desc": "Recharge 4\u20136"
+        },
+        {
+          "name": "Cinder Swarm",
+          "desc": "Recharge 5\u20136"
+        }
+      ],
+      "bonus_actions": [
+        {
+          "name": "Name",
+          "desc": "Recharge / Uses"
+        },
+        {
+          "name": "Flame Renewal",
+          "desc": "2x/day"
+        }
+      ],
+      "reactions": [
+        {
+          "name": "Name",
+          "desc": "Trigger"
+        },
+        {
+          "name": "Flare Back",
+          "desc": "Hit by a ranged or spell attack from within 120 ft."
+        }
+      ],
+      "bloodied_effects": [
+        {
+          "name": "Name",
+          "desc": "Trigger"
+        },
+        {
+          "name": "Crownflame Eruption",
+          "desc": "First reduced below \u00bd HP"
+        }
+      ]
+    },
+    "9fdf72d7": {
+      "id": "9fdf72d7",
+      "name": "Wisp Pack",
+      "combatant_type": "NPC",
+      "source_tab": null,
+      "initiative": 5,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": 10,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": true,
+      "members": [
+        {
+          "id": "415f99a5",
+          "name": "Flame Wisp 1",
+          "max_hp": 10,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "82e6d140",
+          "name": "Flame Wisp 2",
+          "max_hp": 10,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "69b7d4bc",
+          "name": "Flame Wisp 3",
+          "max_hp": 10,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        }
+      ],
+      "initiative_mode": "Grouped Attacks",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "Summoned by Veyrath (no stat tab; uses HP override)",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    }
+  },
+  "log": [],
+  "source_path": "C:\\Users\\jwallin\\OneDrive\\dnd - elemental crown\\battle tracker\\combat tracker.xlsx",
+  "started": true
+}

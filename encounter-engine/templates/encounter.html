@@ -1,0 +1,1740 @@
+{% extends "base.html" %}
+{% block title %}Encounter — Encounter Engine{% endblock %}
+{% block body_class %}encounter-page{% endblock %}
+
+{% block content %}
+<!-- TOP BANNER -->
+<div class="top-banner" id="top-banner">
+  <div class="banner-left">
+    <span class="round-label">Round</span>
+    <span class="round-num" id="banner-round">1</span>
+  </div>
+  <div class="banner-center">
+    <div class="current-turn-label">Current Turn</div>
+    <div class="current-turn-name" id="banner-current">—</div>
+    <div class="next-up-label">Next: <span id="banner-next">—</span></div>
+  </div>
+  <div class="banner-right">
+    <div class="banner-stats">
+      <span id="banner-enemies">— enemies</span> &bull;
+      <span id="banner-enemy-hp">— HP</span> &bull;
+      <span id="banner-pool">— attacks</span>
+    </div>
+    <div class="banner-btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="api('/api/turn/prev','POST')" title="Previous Turn (P)">&#9664; Prev</button>
+      <button class="btn btn-primary btn-xl" onclick="api('/api/turn/next','POST')" id="btn-next-turn" title="Next Turn (N)">Next Turn &#9654;</button>
+      <button class="btn btn-ghost btn-sm" onclick="api('/api/round/next','POST')" title="Next Round">Round+</button>
+    </div>
+  </div>
+  <div class="banner-far-right">
+    <button class="btn btn-ghost btn-sm" onclick="window.location.href='/'">&#8592; Setup</button>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="encounter-layout">
+
+  <!-- CENTER: Combatant Cards -->
+  <div class="combatant-list" id="combatant-list"></div>
+
+  <!-- RIGHT RAIL -->
+  <div class="right-rail">
+
+    <!-- Round Summary -->
+    <div class="rail-section rail-section-sm">
+      <div class="rail-header">
+        <span>Round Summary</span>
+        <select id="summary-round-sel" onchange="renderRoundSummary()" class="log-filter"></select>
+      </div>
+      <div id="round-summary"></div>
+    </div>
+
+    <!-- Dice Feed -->
+    <div class="rail-section">
+      <div class="rail-header">
+        <span>Dice Results</span>
+        <button class="btn btn-primary btn-xs" onclick="openDiceRoller()" title="Open dice roller (R)">&#127922; Roll</button>
+        <button class="btn btn-ghost btn-xs" onclick="clearDiceFeed()">Clear</button>
+      </div>
+      <div class="dice-feed" id="dice-feed"></div>
+    </div>
+
+    <!-- Combat Log -->
+    <div class="rail-section log-section">
+      <div class="rail-header">
+        <span>Combat Log</span>
+        <div>
+          <button class="btn btn-danger btn-xs" onclick="api('/api/log/undo','POST')" title="Undo last action">Undo</button>
+          <select id="log-filter-round" onchange="renderLog()" class="log-filter">
+            <option value="">All rounds</option>
+          </select>
+        </div>
+      </div>
+      <div class="log-list" id="log-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ATTACK MODAL -->
+<div class="modal-overlay" id="attack-modal" style="display:none" onclick="closeAttackModal(event)">
+  <div class="modal-box" id="attack-modal-box">
+    <h3 id="modal-attack-title">Roll Attack</h3>
+    <div class="modal-body" id="modal-attack-body"></div>
+  </div>
+</div>
+
+<!-- CONDITION MODAL -->
+<div class="modal-overlay" id="condition-modal" style="display:none" onclick="closeConditionModal(event)">
+  <div class="modal-box">
+    <h3>Conditions — <span id="cond-modal-name"></span></h3>
+    <div class="condition-grid" id="cond-modal-grid"></div>
+    <div class="field-row" style="margin-top:8px">
+      <input type="text" id="cond-duration-note" placeholder="Duration note (optional)" class="cond-note-input">
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeConditionModal()">Done</button>
+  </div>
+</div>
+
+<!-- STAT BLOCK MODAL -->
+<div class="modal-overlay" id="stat-modal" style="display:none" onclick="closeStatModal(event)">
+  <div class="modal-box modal-wide">
+    <div class="stat-modal-header">
+      <h3 id="stat-modal-title"></h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeStatModal()">&#10006; Close</button>
+    </div>
+    <div id="stat-modal-body"></div>
+  </div>
+</div>
+
+<!-- GROUP ATTACK MODAL -->
+<div class="modal-overlay" id="group-attack-modal" style="display:none" onclick="closeGroupAttackModal(event)">
+  <div class="modal-box" id="group-attack-modal-box">
+    <h3 id="group-attack-title">Group Attack</h3>
+    <div id="group-attack-body"></div>
+  </div>
+</div>
+
+<!-- DICE ROLLER MODAL -->
+<div class="modal-overlay" id="dice-roller-modal" style="display:none" onclick="closeDiceRoller(event)">
+  <div class="modal-box" id="dice-roller-box" style="max-width:460px">
+    <div class="stat-modal-header">
+      <h3>&#127922; Dice Roller</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeDiceRoller()">&#10006;</button>
+    </div>
+    <div style="padding:12px 16px">
+      <!-- Formula display -->
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px">
+        <input type="text" id="dr-formula" placeholder="e.g. 2d20+3d4+4" class="aoe-text-input"
+          style="flex:1;font-size:15px;font-family:monospace"
+          onkeydown="if(event.key==='Enter')diceRollerRoll()">
+        <button class="btn btn-danger btn-sm" onclick="diceRollerClear()">&#10006;</button>
+      </div>
+      <!-- Dice buttons (populated by JS) -->
+      <div class="dr-dice-row" id="dr-die-btns"></div>
+      <!-- Count row -->
+      <div class="dr-dice-row" style="margin-top:6px">
+        <span class="pc-dmg-label">Count:</span>
+        <span id="dr-count-btns"></span>
+      </div>
+      <!-- Modifier row -->
+      <div class="dr-dice-row" style="margin-top:6px;align-items:center">
+        <span class="pc-dmg-label">Mod:</span>
+        <input type="number" id="dr-mod" value="0" style="width:55px;text-align:center">
+        <button class="btn btn-ghost btn-xs" onclick="diceRollerAddMod()">+ Add mod</button>
+        <button class="btn btn-warn btn-sm" style="margin-left:auto" onclick="diceRollerRoll()">&#127922; Roll!</button>
+      </div>
+      <!-- Result area -->
+      <div id="dr-result" style="margin-top:12px;min-height:36px"></div>
+      <!-- History (last 5) -->
+      <div id="dr-history" style="margin-top:8px;font-size:12px;color:var(--text-dim)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- AOE SPELL MODAL -->
+<div class="modal-overlay" id="aoe-modal" style="display:none" onclick="closeAoeModal(event)">
+  <div class="modal-box modal-wide" id="aoe-modal-box">
+    <div class="stat-modal-header">
+      <h3>AoE Spell &mdash; <span id="aoe-caster-name"></span></h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeAoeModal()">&#10006; Close</button>
+    </div>
+    <div id="aoe-modal-body"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let ENC = null;
+let _pendingAttack = null;
+let _condModalCid = null;
+
+const CONDITIONS = [
+  'Blinded','Charmed','Deafened','Exhausted','Frightened','Grappled',
+  'Incapacitated','Invisible','Paralyzed','Petrified','Poisoned',
+  'Prone','Restrained','Stunned','Unconscious','Concentrating',
+  'Reaction Used','Down','Dead','Fled'
+];
+
+const DMG_TYPES = ['','Slashing','Piercing','Bludgeoning','Fire','Cold','Lightning','Thunder','Acid','Poison','Psychic','Radiant','Necrotic','Force'];
+const DMG_OPTIONS = DMG_TYPES.map(t => `<option value="${t}">${t||'—'}</option>`).join('');
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  const data = await (await fetch('/api/state')).json();
+  if (data.encounter) { ENC = data.encounter; render(); }
+})();
+
+// ── API helper ────────────────────────────────────────────────────────────────
+async function api(url, method='POST', body=null) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  let r;
+  try { r = await fetch(url, opts); } catch(e) { alert('Network error: ' + e); return {}; }
+  let data;
+  try { data = await r.json(); } catch(e) { alert(`Server error ${r.status} on ${url}`); return {}; }
+  if (data.error) { alert('Error: ' + data.error); return data; }
+  if (data.encounter) { ENC = data.encounter; render(); }
+  return data;
+}
+
+// ── Master render ─────────────────────────────────────────────────────────────
+function render() {
+  renderBanner();
+  renderCombatants();
+  renderLog();
+  renderRoundSummary();
+}
+
+// ── Banner ────────────────────────────────────────────────────────────────────
+function renderBanner() {
+  if (!ENC) return;
+  document.getElementById('banner-round').textContent = ENC.round;
+
+  const curId = ENC.current_combatant_id;
+  const cur = curId ? ENC.combatants[curId] : null;
+  document.getElementById('banner-current').textContent = cur ? cur.name : '—';
+
+  const nextIdx = (ENC.turn_index + 1) % ENC.order.length;
+  const nextId = ENC.order[nextIdx];
+  const nxt = nextId ? ENC.combatants[nextId] : null;
+  document.getElementById('banner-next').textContent = nxt ? nxt.name : '—';
+
+  const enemies = Object.values(ENC.combatants).filter(c =>
+    c.combatant_type !== 'PC' && !['Dead','Fled','Removed'].includes(c.status)
+  );
+  const totalHp = enemies.reduce((s, c) => s + (c.current_hp ?? 0), 0);
+  const totalPool = enemies.reduce((s, c) => s + (c.attack_pool ?? 0), 0);
+  document.getElementById('banner-enemies').textContent = `${enemies.length} enemies`;
+  document.getElementById('banner-enemy-hp').textContent = `${totalHp} HP`;
+  document.getElementById('banner-pool').textContent = `${totalPool} atks`;
+}
+
+// ── Combatant cards ───────────────────────────────────────────────────────────
+function renderCombatants() {
+  if (!ENC) return;
+  const list = document.getElementById('combatant-list');
+  let html = '';
+  for (const cid of ENC.order) {
+    const c = ENC.combatants[cid];
+    const isCurrent = cid === ENC.current_combatant_id;
+    if (c.combatant_type === 'PC') {
+      html += renderPCCard(c, isCurrent);
+    } else if (c.is_group) {
+      html += renderGroupCard(c, isCurrent);
+    } else {
+      html += renderMonsterCard(c, isCurrent);
+    }
+  }
+  list.innerHTML = html;
+
+  const curEl = list.querySelector('.combatant-card.is-current');
+  if (curEl) curEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+function hpBarClass(c) {
+  if (!c.max_hp) return 'hp-bar-none';
+  const pct = (c.current_hp ?? 0) / c.max_hp;
+  if (pct > 0.5) return 'hp-green';
+  if (pct > 0) return 'hp-yellow';
+  return 'hp-red';
+}
+function hpBarWidth(c) {
+  if (!c.max_hp || c.max_hp === 0) return 0;
+  return Math.max(0, Math.min(100, ((c.current_hp ?? 0) / c.max_hp) * 100));
+}
+function statusPill(status) {
+  return `<span class="status-pill status-${(status||'active').toLowerCase()}">${status||'Active'}</span>`;
+}
+function conditionChips(c) {
+  if (!c.conditions?.length) return '';
+  return c.conditions.map(cond =>
+    `<span class="cond-chip" title="${escHtml(c.condition_notes?.[cond]||'')}">${cond}</span>`
+  ).join('');
+}
+
+// Inline initiative editor — saves on blur/enter
+function initField(c) {
+  const val = c.initiative != null ? c.initiative : '';
+  return `<input type="number" class="init-inline" value="${val}" placeholder="init"
+    title="Click to set initiative"
+    onchange="setInitInline('${c.id}',this.value)"
+    onkeydown="if(event.key==='Enter')this.blur()"
+    style="width:46px">`;
+}
+
+async function setInitInline(cid, val) {
+  if (val === '' || isNaN(parseInt(val))) return;
+  await api('/api/initiative/set', 'POST', { combatant_id: cid, value: parseInt(val) });
+}
+
+// ── PC Card ───────────────────────────────────────────────────────────────────
+function renderPCCard(c, isCurrent) {
+  const currentClass = isCurrent ? ' is-current' : '';
+  const dmgTaken = c.total_damage_received ?? 0;
+  const healed = c.total_healed ?? 0;
+  const netDmg = Math.max(0, dmgTaken - healed);
+
+  // All living combatants as damage targets (monsters + other PCs)
+  const allTargets = Object.values(ENC.combatants)
+    .filter(t => t.id !== c.id && !['Dead','Fled','Removed'].includes(t.status));
+  const pcTargets = Object.values(ENC.combatants)
+    .filter(t => t.combatant_type === 'PC' && t.id !== c.id && !['Dead','Fled','Removed'].includes(t.status));
+
+  return `<div class="combatant-card pc-card ${currentClass}" id="card-${c.id}">
+  <div class="card-header">
+    <div class="card-name">
+      <span class="type-dot type-pc"></span>
+      <strong>${escHtml(c.name)}</strong>
+      ${statusPill(c.status)}
+    </div>
+    <div class="card-meta">
+      <span class="meta-label">Init</span>${initField(c)}
+      <button class="btn btn-ghost btn-xs" onclick="openConditionModal('${c.id}')" title="Conditions">Cond</button>
+      <select class="status-sel btn-xs" onchange="setStatus('${c.id}',this.value)">
+        <option value="">Status…</option>
+        ${['Active','Down','Fled','Removed'].map(s => `<option value="${s}" ${c.status===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+
+  <div class="conditions-row">${conditionChips(c)}</div>
+
+  <!-- Damage/heal totals received -->
+  <div class="pc-totals-row">
+    <span class="pc-dmg-taken">&#9888; Taken: ${dmgTaken}</span>
+    <span class="pc-healed-total">&#10010; Healed: ${healed}</span>
+    ${netDmg > 0 ? `<span class="pc-net-dmg">Net: ${netDmg}</span>` : ''}
+  </div>
+
+  <!-- DM records damage/heal received by this PC -->
+  <div class="pc-received-row">
+    <span class="pc-dmg-label">Recv'd:</span>
+    <input type="number" min="0" class="dmg-input" id="pcrecvdmg-${c.id}" placeholder="dmg">
+    <select class="dmg-type-sel" id="pcrecvtype-${c.id}">${DMG_OPTIONS}</select>
+    <button class="btn btn-danger btn-sm" onclick="pcReceivesDamage('${c.id}')">Dmg</button>
+    <input type="number" min="0" class="dmg-input" id="pcrecvheal-${c.id}" placeholder="heal">
+    <button class="btn btn-heal btn-sm" onclick="pcReceivesHeal('${c.id}')">Heal</button>
+  </div>
+
+  <!-- PC deals damage to any target -->
+  <div class="pc-damage-row">
+    <span class="pc-dmg-label">Dealt:</span>
+    <input type="number" min="0" class="dmg-input" id="pcdmg-${c.id}" placeholder="dmg">
+    <select class="dmg-type-sel" id="pcdmgtype-${c.id}">${DMG_OPTIONS}</select>
+    <span class="pc-dmg-label">to</span>
+    <select id="pcdmgtgt-${c.id}" class="dmg-type-sel">
+      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+    </select>
+    <button class="btn btn-danger btn-sm" onclick="pcDealsDamage('${c.id}')">Apply</button>
+  </div>
+
+  <!-- PC heals another PC -->
+  ${pcTargets.length ? `<div class="pc-damage-row">
+    <span class="pc-dmg-label">Heals:</span>
+    <input type="number" min="0" class="dmg-input" id="pcheal-${c.id}" placeholder="heal">
+    <span class="pc-dmg-label">to</span>
+    <select id="pchealtgt-${c.id}" class="dmg-type-sel">
+      ${pcTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+    </select>
+    <button class="btn btn-heal btn-sm" onclick="pcHealsTarget('${c.id}')">Heal</button>
+  </div>` : ''}
+
+  <div class="pc-damage-row">
+    <button class="btn btn-warn btn-sm" onclick="openAoeModal('${c.id}','${escJs(c.name)}')">&#9733; AoE Spell</button>
+  </div>
+
+  ${c.notes ? `<div class="card-notes">${escHtml(c.notes)}</div>` : ''}
+</div>`;
+}
+
+async function pcReceivesDamage(pcId) {
+  const amt = parseInt(document.getElementById('pcrecvdmg-'+pcId)?.value || '0');
+  if (!amt) return;
+  const dtype = document.getElementById('pcrecvtype-'+pcId)?.value || '';
+  document.getElementById('pcrecvdmg-'+pcId).value = '';
+  await api(`/api/combatant/${pcId}/damage`, 'POST', { amount: amt, damage_type: dtype });
+}
+
+async function pcReceivesHeal(pcId) {
+  const amt = parseInt(document.getElementById('pcrecvheal-'+pcId)?.value || '0');
+  if (!amt) return;
+  document.getElementById('pcrecvheal-'+pcId).value = '';
+  await api(`/api/combatant/${pcId}/heal`, 'POST', { amount: amt });
+}
+
+async function pcDealsDamage(pcId) {
+  const amt = parseInt(document.getElementById('pcdmg-'+pcId)?.value || '0');
+  if (!amt) return;
+  const dtype = document.getElementById('pcdmgtype-'+pcId)?.value || '';
+  const targetId = document.getElementById('pcdmgtgt-'+pcId)?.value;
+  if (!targetId) return;
+  document.getElementById('pcdmg-'+pcId).value = '';
+  const pcName = ENC.combatants[pcId]?.name || 'PC';
+  const tgt = ENC.combatants[targetId];
+  if (tgt?.is_group) {
+    await api(`/api/group/${targetId}/allocate`, 'POST', {
+      mode: 'frontload', amount: amt, damage_type: dtype, source: pcName
+    });
+  } else {
+    await api(`/api/combatant/${targetId}/damage`, 'POST', {
+      amount: amt, damage_type: dtype, source: pcName
+    });
+  }
+}
+
+async function pcHealsTarget(pcId) {
+  const amt = parseInt(document.getElementById('pcheal-'+pcId)?.value || '0');
+  if (!amt) return;
+  const targetId = document.getElementById('pchealtgt-'+pcId)?.value;
+  if (!targetId) return;
+  document.getElementById('pcheal-'+pcId).value = '';
+  const pcName = ENC.combatants[pcId]?.name || 'PC';
+  await api(`/api/combatant/${targetId}/heal`, 'POST', { amount: amt, source: pcName });
+}
+
+async function npcDealsDamage(cid) {
+  const amt = parseInt(document.getElementById('npcdmg-'+cid)?.value || '0');
+  if (!amt) return;
+  const dtype = document.getElementById('npcdmgtype-'+cid)?.value || '';
+  const targetId = document.getElementById('npcdmgtgt-'+cid)?.value;
+  if (!targetId) return;
+  document.getElementById('npcdmg-'+cid).value = '';
+  const npcName = ENC.combatants[cid]?.name || 'NPC';
+  await api(`/api/combatant/${targetId}/damage`, 'POST', { amount: amt, damage_type: dtype, source: npcName });
+}
+
+async function npcHealsTarget(cid) {
+  const amt = parseInt(document.getElementById('npcheal-'+cid)?.value || '0');
+  if (!amt) return;
+  const targetId = document.getElementById('npchealtgt-'+cid)?.value;
+  if (!targetId) return;
+  document.getElementById('npcheal-'+cid).value = '';
+  const npcName = ENC.combatants[cid]?.name || 'NPC';
+  await api(`/api/combatant/${targetId}/heal`, 'POST', { amount: amt, source: npcName });
+}
+
+// ── Monster Card ──────────────────────────────────────────────────────────────
+function renderMonsterCard(c, isCurrent) {
+  const typeClass = `type-${(c.combatant_type||'npc').toLowerCase()}`;
+  const currentClass = isCurrent ? ' is-current' : '';
+  const hpPct = hpBarWidth(c);
+  const hpClass = hpBarClass(c);
+
+  // Only show non-header attacks (skip rows where name="Name" — Excel template header)
+  const attacks = (c.attacks || []).filter(a => a.name && a.name !== 'Name');
+
+  const allTargets = Object.values(ENC.combatants)
+    .filter(t => t.id !== c.id && !['Dead','Fled','Removed'].includes(t.status));
+  const typeLabel = (c.combatant_type || 'NPC').toUpperCase();
+
+  return `<div class="combatant-card ${currentClass}" id="card-${c.id}">
+  <div class="card-header">
+    <div class="card-name">
+      <span class="type-dot ${typeClass}"></span>
+      <span class="combatant-type-label type-label-${typeLabel.toLowerCase()}">${typeLabel}</span>
+      <strong>${escHtml(c.name)}</strong>
+      ${statusPill(c.status)}
+      ${c.concentration ? '<span class="conc-badge">CON</span>' : ''}
+    </div>
+    <div class="card-meta">
+      <span class="meta-label">Init</span>${initField(c)}
+      <span class="meta-stat" title="Armor Class">AC&nbsp;${c.ac ?? '—'}</span>
+      ${c.temp_hp > 0 ? `<span class="meta-stat temp-hp">+${c.temp_hp}&nbsp;tmp</span>` : ''}
+      <button class="btn btn-stat btn-sm" onclick="openStatModal('${c.id}')" title="View stat block">Stat Block</button>
+    </div>
+  </div>
+
+  <div class="hp-row">
+    <div class="hp-bar-track">
+      <div class="hp-bar-fill ${hpClass}" style="width:${hpPct}%"></div>
+    </div>
+    <span class="hp-label">${c.current_hp ?? '—'} / ${c.max_hp ?? '—'} HP</span>
+  </div>
+
+  <div class="conditions-row">${conditionChips(c)}</div>
+
+  <div class="attacks-row">
+    ${attacks.map(a =>
+      `<button class="btn btn-atk btn-sm" onclick="openAttackModal('${c.id}','${escJs(a.name)}')"
+        title="${a.to_hit != null ? 'To hit: +'+a.to_hit : a.save_dc ? 'DC '+a.save_dc+' '+a.save_ability : 'roll d20'}">
+        ${escHtml(a.name)}${a.to_hit != null ? ` <span class="atk-bonus">+${a.to_hit}</span>` : ''}
+      </button>`
+    ).join('')}
+    <button class="btn btn-atk btn-sm" onclick="openRawRollModal('${c.id}')">d20 Roll</button>
+    <button class="btn btn-warn btn-sm" onclick="openAoeModal('${c.id}','${escJs(c.name)}')">&#9733; AoE</button>
+  </div>
+
+  <!-- Recv damage/heal directly (monsters taking hits or potions) -->
+  <div class="damage-row">
+    <div class="dmg-group">
+      <input type="number" min="0" class="dmg-input" id="dmg-${c.id}" placeholder="Recv dmg">
+      <select class="dmg-type-sel" id="dmgtype-${c.id}">${DMG_OPTIONS}</select>
+      <button class="btn btn-danger btn-sm" onclick="quickDamage('${c.id}')">Damage</button>
+    </div>
+    <div class="heal-group">
+      <input type="number" min="0" class="dmg-input" id="heal-${c.id}" placeholder="Recv heal">
+      <button class="btn btn-heal btn-sm" onclick="quickHeal('${c.id}')">Heal</button>
+    </div>
+    <button class="btn btn-ghost btn-xs" onclick="openConditionModal('${c.id}')">Cond</button>
+    <select class="status-sel btn-xs" onchange="setStatus('${c.id}',this.value)">
+      <option value="">Status…</option>
+      ${['Active','Bloodied','Down','Dead','Fled','Removed'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${s}</option>`).join('')}
+    </select>
+  </div>
+
+  <!-- Deal damage to another combatant -->
+  ${allTargets.length ? `<div class="pc-damage-row">
+    <span class="pc-dmg-label">Deals:</span>
+    <input type="number" min="0" class="dmg-input" id="npcdmg-${c.id}" placeholder="dmg">
+    <select class="dmg-type-sel" id="npcdmgtype-${c.id}">${DMG_OPTIONS}</select>
+    <span class="pc-dmg-label">to</span>
+    <select id="npcdmgtgt-${c.id}" class="dmg-type-sel">
+      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+    </select>
+    <button class="btn btn-danger btn-sm" onclick="npcDealsDamage('${c.id}')">Apply</button>
+  </div>` : ''}
+
+  <!-- Give heal to another combatant -->
+  ${allTargets.length ? `<div class="pc-damage-row">
+    <span class="pc-dmg-label">Heals:</span>
+    <input type="number" min="0" class="dmg-input" id="npcheal-${c.id}" placeholder="heal">
+    <span class="pc-dmg-label">to</span>
+    <select id="npchealtgt-${c.id}" class="dmg-type-sel">
+      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+    </select>
+    <button class="btn btn-heal btn-sm" onclick="npcHealsTarget('${c.id}')">Heal</button>
+  </div>` : ''}
+
+  ${renderLimitedUse(c)}
+  ${c.notes ? `<div class="card-notes">${escHtml(c.notes)}</div>` : ''}
+</div>`;
+}
+
+// ── Group card ────────────────────────────────────────────────────────────────
+function renderGroupCard(c, isCurrent) {
+  const currentClass = isCurrent ? ' is-current' : '';
+  const hpPct = hpBarWidth(c);
+  const hpClass = hpBarClass(c);
+  const living = (c.members||[]).filter(m =>
+    !['Down','Dead','Fled','Removed'].includes(m.status_override) && (m.current_hp ?? m.max_hp) > 0
+  );
+  const attacks = (c.attacks||[]).filter(a => a.name && a.name !== 'Name');
+  const allTargets = Object.values(ENC.combatants)
+    .filter(t => t.id !== c.id && !['Dead','Fled','Removed'].includes(t.status));
+
+  return `<div class="combatant-card group-card ${currentClass}" id="card-${c.id}">
+  <div class="card-header">
+    <div class="card-name">
+      <span class="type-dot type-npc"></span>
+      <span class="combatant-type-label type-label-npc">NPC</span>
+      <strong>${escHtml(c.name)}</strong>
+      <span class="group-badge">${living.length}/${(c.members||[]).length}</span>
+      ${statusPill(c.status)}
+    </div>
+    <div class="card-meta">
+      <span class="meta-label">Init</span>${initField(c)}
+      <span class="meta-stat" title="Armor Class">AC&nbsp;${c.ac ?? '—'}</span>
+      <span class="meta-stat atk-pool" title="Attack pool">&#9876;&nbsp;${c.attack_pool ?? 0}</span>
+      ${c.source_tab ? `<button class="btn btn-stat btn-sm" onclick="openStatModal('${c.id}')">Stat Block</button>` : ''}
+    </div>
+  </div>
+
+  <div class="hp-row">
+    <div class="hp-bar-track">
+      <div class="hp-bar-fill ${hpClass}" style="width:${hpPct}%"></div>
+    </div>
+    <span class="hp-label">${c.current_hp ?? '—'} / ${(c.max_hp ?? 0) * (c.members||[]).length} HP</span>
+  </div>
+
+  <div class="attacks-row">
+    ${attacks.map(a =>
+      `<button class="btn btn-atk btn-sm" onclick="openGroupAttackModal('${c.id}','${escJs(a.name)}')">${escHtml(a.name)} (group)</button>`
+    ).join('')}
+    <button class="btn btn-atk btn-sm" onclick="openRawRollModal('${c.id}')">d20 Roll</button>
+    <button class="btn btn-warn btn-sm" onclick="openAoeModal('${c.id}','${escJs(c.name)}')">&#9733; AoE</button>
+  </div>
+
+  <!-- Group receives damage (split or frontload) -->
+  <div class="damage-row">
+    <div class="dmg-group">
+      <input type="number" min="0" class="dmg-input" id="dmg-${c.id}" placeholder="Recv dmg">
+      <select class="dmg-type-sel" id="dmgtype-${c.id}">${DMG_OPTIONS}</select>
+      <select id="alloc-${c.id}" class="alloc-sel">
+        <option value="frontload">Frontload</option>
+        <option value="even">Even Split</option>
+      </select>
+      <button class="btn btn-danger btn-sm" onclick="groupDamage('${c.id}')">Damage</button>
+    </div>
+    <div class="heal-group">
+      <input type="number" min="0" class="dmg-input" id="heal-${c.id}" placeholder="Recv heal">
+      <button class="btn btn-heal btn-sm" onclick="quickHeal('${c.id}')">Heal</button>
+    </div>
+    <button class="btn btn-ghost btn-xs" onclick="openConditionModal('${c.id}')">Cond</button>
+    <select class="status-sel btn-xs" onchange="setStatus('${c.id}',this.value)">
+      <option value="">Status…</option>
+      ${['Active','Bloodied','Down','Dead','Fled','Removed'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${s}</option>`).join('')}
+    </select>
+  </div>
+
+  <!-- Deal damage to another combatant -->
+  ${allTargets.length ? `<div class="pc-damage-row">
+    <span class="pc-dmg-label">Deals:</span>
+    <input type="number" min="0" class="dmg-input" id="npcdmg-${c.id}" placeholder="dmg">
+    <select class="dmg-type-sel" id="npcdmgtype-${c.id}">${DMG_OPTIONS}</select>
+    <span class="pc-dmg-label">to</span>
+    <select id="npcdmgtgt-${c.id}" class="dmg-type-sel">
+      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+    </select>
+    <button class="btn btn-danger btn-sm" onclick="npcDealsDamage('${c.id}')">Apply</button>
+  </div>` : ''}
+
+  <!-- Give heal to another combatant -->
+  ${allTargets.length ? `<div class="pc-damage-row">
+    <span class="pc-dmg-label">Heals:</span>
+    <input type="number" min="0" class="dmg-input" id="npcheal-${c.id}" placeholder="heal">
+    <span class="pc-dmg-label">to</span>
+    <select id="npchealtgt-${c.id}" class="dmg-type-sel">
+      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+    </select>
+    <button class="btn btn-heal btn-sm" onclick="npcHealsTarget('${c.id}')">Heal</button>
+  </div>` : ''}
+
+  <details class="member-details">
+    <summary class="member-summary">Members (${(c.members||[]).length})</summary>
+    <div class="member-list">
+      ${(c.members||[]).map(m => renderMemberRow(c, m)).join('')}
+    </div>
+  </details>
+
+  ${renderLimitedUse(c)}
+  ${c.notes ? `<div class="card-notes">${escHtml(c.notes)}</div>` : ''}
+</div>`;
+}
+
+function renderMemberRow(c, m) {
+  const hp = m.current_hp ?? m.max_hp;
+  const maxHp = m.max_hp;
+  const pct = maxHp > 0 ? Math.max(0, Math.min(100, (hp / maxHp) * 100)) : 0;
+  const barClass = hp > maxHp * 0.5 ? 'hp-green' : hp > 0 ? 'hp-yellow' : 'hp-red';
+  const statusOv = m.status_override || '';
+
+  return `<div class="member-row ${statusOv ? 'member-'+statusOv.toLowerCase() : ''}">
+  <div class="member-name">
+    <input type="checkbox" ${m.can_attack ? 'checked' : ''} title="Can attack"
+      onchange="memberCanAttack('${c.id}','${m.id}',this.checked)">
+    ${escHtml(m.name)}
+    ${statusOv ? `<span class="status-pill status-${statusOv.toLowerCase()}">${statusOv}</span>` : ''}
+  </div>
+  <div class="member-hp-bar-track">
+    <div class="hp-bar-fill ${barClass}" style="width:${pct}%"></div>
+  </div>
+  <span class="hp-label-sm">${hp}/${maxHp}</span>
+  <div class="member-actions">
+    <input type="number" min="0" class="dmg-input-sm" id="mdmg-${m.id}" placeholder="Dmg">
+    <button class="btn btn-danger btn-xs" onclick="memberDamage('${c.id}','${m.id}')">D</button>
+    <input type="number" min="0" class="dmg-input-sm" id="mheal-${m.id}" placeholder="Heal">
+    <button class="btn btn-heal btn-xs" onclick="memberHeal('${c.id}','${m.id}')">H</button>
+    <select class="status-sel-sm" onchange="memberStatus('${c.id}','${m.id}',this.value)">
+      <option value="">—</option>
+      ${['Down','Dead','Fled','Removed'].map(s=>`<option value="${s}" ${statusOv===s?'selected':''}>${s}</option>`).join('')}
+    </select>
+  </div>
+</div>`;
+}
+
+function renderLimitedUse(c) {
+  if (!c.limited_use?.length) return '';
+  let html = '<div class="limited-use-row">';
+  for (const lu of c.limited_use) {
+    const remaining = lu.max_uses - lu.used;
+    html += `<span class="lu-item">
+      <span class="lu-name">${escHtml(lu.name)}</span>
+      <button class="lu-pip-btn" onclick="consumeLU('${c.id}','${escJs(lu.name)}')" ${remaining===0?'disabled':''}>&#9679;</button>
+      <span class="lu-count">${remaining}/${lu.max_uses}</span>
+      <button class="lu-pip-btn lu-restore" onclick="restoreLU('${c.id}','${escJs(lu.name)}')" ${lu.used===0?'disabled':''}>&#8617;</button>
+    </span>`;
+  }
+  return html + '</div>';
+}
+
+// ── Round summary ─────────────────────────────────────────────────────────────
+function renderRoundSummary() {
+  if (!ENC) return;
+  const log = ENC.log || [];
+  const rounds = [...new Set(log.map(e => e.round))].sort((a,b) => b-a);
+
+  const sel = document.getElementById('summary-round-sel');
+  const prev = sel.value;
+  sel.innerHTML = rounds.map(r => `<option value="${r}" ${prev==r?'selected':''}>Round ${r}</option>`).join('');
+  if (!sel.value && rounds.length) sel.value = rounds[0];
+
+  const round = parseInt(sel.value || ENC.round);
+  const roundLog = log.filter(e => e.round === round);
+
+  // Sum damage dealt to each combatant this round
+  const dmgByTarget = {};
+  for (const e of roundLog) {
+    if (e.event_type !== 'damage') continue;
+    const key = e.target_id + (e.member_id ? ':'+e.member_id : '');
+    const label = e.target;
+    if (!dmgByTarget[key]) dmgByTarget[key] = { label, total: 0, by: {} };
+    dmgByTarget[key].total += e.amount;
+    const src = e.source || 'unknown';
+    dmgByTarget[key].by[src] = (dmgByTarget[key].by[src] || 0) + e.amount;
+  }
+
+  const el = document.getElementById('round-summary');
+  if (!Object.keys(dmgByTarget).length) {
+    el.innerHTML = '<div class="summary-empty">No damage this round</div>';
+    return;
+  }
+  let html = '';
+  for (const [, d] of Object.entries(dmgByTarget)) {
+    html += `<div class="summary-row">
+      <span class="summary-tgt">${escHtml(d.label)}</span>
+      <span class="summary-total dmg-amt">${d.total} dmg</span>
+      <span class="summary-by">${Object.entries(d.by).map(([s,v])=>`${escHtml(s)}: ${v}`).join(', ')}</span>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ── Attack modal (monsters) ───────────────────────────────────────────────────
+// For any target: always roll d20 + to_hit and show total.
+// If target is a PC (no AC known) → DM clicks Hit or Miss manually.
+// If target is NPC with AC → auto-determine but still let DM override.
+function openAttackModal(cid, attackName) {
+  const c = ENC.combatants[cid];
+  if (!c) return;
+  _pendingAttack = { combatant_id: cid, attack_name: attackName };
+
+  document.getElementById('modal-attack-title').textContent = `${c.name} — ${attackName}`;
+  const body = document.getElementById('modal-attack-body');
+
+  const targets = Object.values(ENC.combatants).filter(t =>
+    t.id !== cid && !['Dead','Fled','Removed'].includes(t.status)
+  );
+
+  const atk = (c.attacks||[]).find(a => a.name === attackName);
+  const toHitDisp = atk?.to_hit != null ? `+${atk.to_hit}` : 'd20 only';
+  const dmgDisp = atk?.damage_dice?.length
+    ? atk.damage_dice.map(d=>`${d.n}d${d.die}${d.bonus?'+'+d.bonus:''} ${d.damage_type}`).join(' + ')
+    : '—';
+
+  body.innerHTML = `
+    <div class="atk-summary-line">${toHitDisp} to hit &bull; ${escHtml(dmgDisp)}</div>
+    <div class="modal-field-row">
+      <label>Target</label>
+      <select id="modal-target" onchange="updateTargetAC()">
+        ${targets.map(t => {
+          const acLabel = t.combatant_type === 'PC' ? '(PC — AC unknown)' : `AC ${t.ac ?? '?'}`;
+          return `<option value="${t.id}" data-ac="${t.ac ?? ''}" data-pc="${t.combatant_type==='PC'?'1':'0'}">${escHtml(t.name)} ${acLabel}</option>`;
+        }).join('')}
+      </select>
+    </div>
+    <div class="modal-field-row" id="target-ac-row">
+      <label>Target AC</label>
+      <input type="number" id="modal-target-ac" placeholder="AC" style="width:60px">
+      <span class="ac-note" id="ac-note"></span>
+    </div>
+    <div class="modal-field-row">
+      <label>Adv/Dis</label>
+      <label><input type="radio" name="advdis" value="normal" checked> Normal</label>
+      <label><input type="radio" name="advdis" value="adv"> Adv</label>
+      <label><input type="radio" name="advdis" value="dis"> Dis</label>
+    </div>
+    <button class="btn btn-primary" onclick="rollAttackModal()">Roll Attack</button>
+    <div id="attack-result" style="margin-top:12px"></div>
+  `;
+
+  // Pre-fill target AC
+  updateTargetAC();
+  document.getElementById('attack-modal').style.display = 'flex';
+}
+
+function updateTargetAC() {
+  const sel = document.getElementById('modal-target');
+  const opt = sel?.options[sel.selectedIndex];
+  const acInput = document.getElementById('modal-target-ac');
+  const acNote = document.getElementById('ac-note');
+  if (!opt) return;
+  const isPC = opt.dataset.pc === '1';
+  const ac = opt.dataset.ac;
+  if (isPC) {
+    acInput.value = '';
+    acInput.placeholder = 'enter AC';
+    acNote.textContent = 'PC — you know their AC';
+  } else if (ac) {
+    acInput.value = ac;
+    acNote.textContent = '(from stat block)';
+  } else {
+    acInput.value = '';
+    acNote.textContent = '';
+  }
+}
+
+async function rollAttackModal() {
+  const targetId = document.getElementById('modal-target').value;
+  const advVal = document.querySelector('input[name="advdis"]:checked')?.value || 'normal';
+  const adv = advVal === 'adv';
+  const dis = advVal === 'dis';
+
+  // Override target AC from the input (handles PC targets)
+  const acOverride = document.getElementById('modal-target-ac')?.value;
+  const acVal = acOverride ? parseInt(acOverride) : null;
+
+  const data = await fetch('/api/attack/roll', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      combatant_id: _pendingAttack.combatant_id,
+      attack_name: _pendingAttack.attack_name,
+      target_id: targetId,
+      adv, dis,
+      ac_override: acVal,
+    })
+  }).then(r => r.json());
+
+  if (!data.ok) {
+    document.getElementById('attack-result').innerHTML = `<span class="error-msg">${data.error}</span>`;
+    return;
+  }
+
+  const res = data.result;
+
+  // If server didn't return attack_roll for a to_hit attack, build it client-side
+  if (!res.attack_roll && !res.save_dc) {
+    const c = ENC.combatants[res.combatant_id];
+    const atk = (c?.attacks||[]).find(a => a.name === res.attack_name);
+    if (atk?.to_hit != null) {
+      const advVal2 = document.querySelector('input[name="advdis"]:checked')?.value || 'normal';
+      const d1 = Math.ceil(Math.random()*20);
+      const d2 = (advVal2 !== 'normal') ? Math.ceil(Math.random()*20) : null;
+      const nat = advVal2==='adv' ? Math.max(d1,d2||0) : advVal2==='dis' ? Math.min(d1,d2||20) : d1;
+      const both = d2 ? [d1,d2] : [d1];
+      const acInput = document.getElementById('modal-target-ac')?.value;
+      const knownAC = acInput ? parseInt(acInput) : null;
+      const hit = knownAC != null ? (nat===20 || (nat!==1 && nat+atk.to_hit >= knownAC)) : null;
+      res.attack_roll = { d20: nat, both_dice: both, total: nat+atk.to_hit, hit, crit: nat===20, to_hit: atk.to_hit, target_ac: knownAC };
+      // Roll damage client-side if we have dice
+      if (!res.damage && atk.damage_dice?.length) {
+        let grand = 0;
+        const clauses = atk.damage_dice.map(d => {
+          const rolls = Array.from({length: nat===20 ? d.n*2 : d.n}, ()=>Math.ceil(Math.random()*d.die));
+          const total = rolls.reduce((a,b)=>a+b,0) + d.bonus;
+          grand += total;
+          return {n:d.n,die:d.die,bonus:d.bonus,damage_type:d.damage_type,rolls,total};
+        });
+        res.damage = { clauses, grand_total: grand, crit: nat===20 };
+        res.half_damage = Math.floor(grand/2);
+      }
+    }
+  }
+
+  _pendingAttack.result = res;
+  addDiceFeed(res);
+
+  const el = document.getElementById('attack-result');
+
+  if (res.attack_roll) {
+    const ar = res.attack_roll;
+    const target = ENC.combatants[targetId];
+    const isPC = target?.combatant_type === 'PC';
+    const noAC = ar.target_ac == null;
+
+    // Show roll result
+    const hitClass = ar.crit ? 'result-crit' : ar.hit ? 'result-hit' : 'result-miss';
+    const autoLabel = ar.crit ? '&#9889; CRIT!' : ar.hit ? 'HIT' : 'MISS';
+    const hitLabel = (isPC || noAC)
+      ? `<strong>${ar.total}</strong> — Hit or Miss?`
+      : autoLabel;
+
+    let html = `<div class="attack-result-block ${ar.crit ? 'result-crit' : noAC || isPC ? 'result-unknown' : ar.hit ? 'result-hit' : 'result-miss'}">
+      <div class="result-label">${hitLabel}</div>
+      <div class="result-detail">d20: ${ar.d20}${ar.both_dice?.length>1?' ('+ar.both_dice.join(',')+')':''} ${ar.to_hit>=0?'+':''}${ar.to_hit} = <strong>${ar.total}</strong>${ar.target_ac?' vs AC '+ar.target_ac:''}</div>`;
+
+    if (res.damage) {
+      html += renderDamageResult(res.damage);
+      // Always show apply buttons so DM can choose
+      if (ar.hit && !isPC && !noAC) {
+        html += `<button class="btn btn-danger" onclick="applyAttackDamage()">Apply ${res.damage.grand_total} damage</button>`;
+      } else {
+        html += `<button class="btn btn-danger" onclick="applyAttackDamage()">Apply ${res.damage.grand_total} (HIT)</button>`;
+        html += `<button class="btn btn-ghost btn-sm" onclick="closeAttackModal()">Miss — discard</button>`;
+      }
+    } else if (ar.hit || isPC || noAC) {
+      // No damage dice — just show the roll
+      html += `<div class="result-note">No damage dice — apply manually if needed</div>`;
+    }
+
+    html += '</div>';
+    el.innerHTML = html;
+
+  } else if (res.save_dc) {
+    let html = `<div class="attack-result-block result-save">
+      <div class="result-label">Save: DC ${res.save_dc} ${res.save_ability}</div>`;
+    if (res.damage) {
+      html += renderDamageResult(res.damage);
+      html += `<button class="btn btn-danger" onclick="applyAttackDamage()">Apply ${res.damage.grand_total} (fail)</button>`;
+      html += `<button class="btn btn-warn" onclick="applyAttackDamage(true)">Apply ${res.half_damage} (save)</button>`;
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+}
+
+// Raw d20 roll for monsters without parsed attacks
+function openRawRollModal(cid) {
+  const c = ENC.combatants[cid];
+  _pendingAttack = { combatant_id: cid, attack_name: 'd20' };
+  document.getElementById('modal-attack-title').textContent = `${c.name} — d20 Roll`;
+  const body = document.getElementById('modal-attack-body');
+  body.innerHTML = `
+    <div class="modal-field-row">
+      <label>To-hit bonus</label>
+      <input type="number" id="raw-to-hit" value="0" style="width:60px">
+    </div>
+    <div class="modal-field-row">
+      <label>Adv/Dis</label>
+      <label><input type="radio" name="rawadv" value="normal" checked> Normal</label>
+      <label><input type="radio" name="rawadv" value="adv"> Adv</label>
+      <label><input type="radio" name="rawadv" value="dis"> Dis</label>
+    </div>
+    <button class="btn btn-primary" onclick="rollRawD20('${cid}')">Roll d20</button>
+    <div id="raw-result" style="margin-top:12px"></div>
+  `;
+  document.getElementById('attack-modal').style.display = 'flex';
+}
+
+async function rollRawD20(cid) {
+  const bonus = parseInt(document.getElementById('raw-to-hit')?.value || '0');
+  const advVal = document.querySelector('input[name="rawadv"]:checked')?.value || 'normal';
+  const adv = advVal === 'adv';
+  const dis = advVal === 'dis';
+  // Roll client-side for raw d20
+  const d1 = Math.floor(Math.random()*20)+1;
+  const d2 = (adv || dis) ? Math.floor(Math.random()*20)+1 : null;
+  const nat = adv ? Math.max(d1, d2) : dis ? Math.min(d1, d2) : d1;
+  const total = nat + bonus;
+  const both = d2 != null ? `(${d1},${d2})` : '';
+  const isCrit = nat === 20;
+  const isFumble = nat === 1;
+
+  const cls = isCrit ? 'result-crit' : isFumble ? 'result-miss' : 'result-unknown';
+  const label = isCrit ? '&#9889; NAT 20' : isFumble ? 'NAT 1' : `<strong>${total}</strong>`;
+  document.getElementById('raw-result').innerHTML = `
+    <div class="attack-result-block ${cls}">
+      <div class="result-label">${label}</div>
+      <div class="result-detail">d20: ${nat} ${both} ${bonus>=0?'+':''}${bonus} = ${total}</div>
+    </div>`;
+
+  // Add to dice feed
+  const feed = document.getElementById('dice-feed');
+  const hitCls = isCrit ? 'die-crit' : isFumble ? 'die-miss' : 'die-hit';
+  feed.insertAdjacentHTML('afterbegin',
+    `<div class="dice-entry"><div class="die-row">
+      <span class="die-face ${hitCls}">${nat}</span>
+      ${both ? `<span class="die-both">${both}</span>` : ''}
+      ${bonus ? ` ${bonus>=0?'+':''}${bonus}` : ''} = ${total}
+      ${ENC.combatants[cid]?.name ? `<span class="die-src">${escHtml(ENC.combatants[cid].name)}</span>` : ''}
+    </div></div>`);
+}
+
+function renderDamageResult(dmg) {
+  let html = `<div class="damage-result">`;
+  for (const clause of (dmg.clauses||[])) {
+    html += `<span class="dmg-clause">[${clause.rolls.join('+')}]${clause.bonus?'+'+clause.bonus:''} ${clause.damage_type} = <strong>${clause.total}</strong></span> `;
+  }
+  if ((dmg.clauses?.length||0) > 1) html += `<span class="dmg-total">= <strong>${dmg.grand_total}</strong></span>`;
+  return html + '</div>';
+}
+
+async function applyAttackDamage(half=false) {
+  if (!_pendingAttack?.result) return;
+  const res = _pendingAttack.result;
+  const amount = half ? (res.half_damage || Math.floor(res.damage.grand_total/2)) : res.damage.grand_total;
+  const dtype = res.damage?.clauses?.[0]?.damage_type || '';
+  const tgt = ENC.combatants[res.target_id];
+  const source = ENC.combatants[_pendingAttack.combatant_id]?.name || 'DM';
+  if (tgt?.is_group) {
+    await api(`/api/group/${res.target_id}/allocate`, 'POST', {
+      mode: 'frontload', amount, damage_type: dtype, attack_name: res.attack_name, source
+    });
+  } else {
+    await api('/api/attack/apply', 'POST', {
+      target_id: res.target_id, amount, damage_type: dtype,
+      attack_name: res.attack_name, source
+    });
+  }
+  closeAttackModal();
+}
+
+function closeAttackModal(e) {
+  if (e && e.target !== document.getElementById('attack-modal')) return;
+  document.getElementById('attack-modal').style.display = 'none';
+  _pendingAttack = null;
+}
+
+// ── Group attack modal ────────────────────────────────────────────────────────
+function openGroupAttackModal(cid, attackName) {
+  const c = ENC.combatants[cid];
+  if (!c) return;
+  const pool = c.attack_pool ?? 0;
+  const targets = Object.values(ENC.combatants).filter(t =>
+    t.id !== cid && !['Dead','Fled','Removed'].includes(t.status)
+  );
+
+  document.getElementById('group-attack-title').textContent = `${c.name} — ${attackName} (pool: ${pool})`;
+  document.getElementById('group-attack-body').innerHTML = `
+    <div class="modal-field-row">
+      <label>Target</label>
+      <select id="grp-target">
+        ${targets.map(t => `<option value="${t.id}">${escHtml(t.name)} ${t.combatant_type==='PC'?'(PC)':'AC '+(t.ac??'?')}</option>`).join('')}
+      </select>
+    </div>
+    <div class="modal-field-row">
+      <label>Target AC</label>
+      <input type="number" id="grp-target-ac" placeholder="AC" style="width:60px">
+    </div>
+    <div class="modal-field-row">
+      <label>Mode</label>
+      <label><input type="radio" name="grpmode" value="batch" checked> Batch</label>
+      <label><input type="radio" name="grpmode" value="mob"> Mob</label>
+      <label><input type="radio" name="grpmode" value="average"> Average</label>
+    </div>
+    <div id="mob-override-row" style="display:none" class="modal-field-row">
+      <label>Override hits</label>
+      <input type="number" min="0" id="mob-override" placeholder="blank = table">
+    </div>
+    <div id="avg-hits-row" style="display:none" class="modal-field-row">
+      <label>Hits</label>
+      <input type="number" min="0" id="avg-hits" value="${pool}">
+    </div>
+    <button class="btn btn-primary" onclick="rollGroupAttack('${cid}','${escJs(attackName)}')">Roll</button>
+    <div id="group-attack-result" style="margin-top:12px"></div>
+  `;
+
+  // Pre-fill target AC when selection changes
+  const grpSel = document.getElementById('grp-target');
+  grpSel.addEventListener('change', () => {
+    const tgt = ENC.combatants[grpSel.value];
+    if (tgt?.ac) document.getElementById('grp-target-ac').value = tgt.ac;
+    else document.getElementById('grp-target-ac').value = '';
+  });
+  // Initial fill
+  if (targets[0]?.ac) document.getElementById('grp-target-ac').value = targets[0].ac;
+
+  document.querySelectorAll('input[name="grpmode"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.getElementById('mob-override-row').style.display = r.value==='mob'?'flex':'none';
+      document.getElementById('avg-hits-row').style.display = r.value==='average'?'flex':'none';
+    });
+  });
+
+  document.getElementById('group-attack-modal').style.display = 'flex';
+}
+
+async function rollGroupAttack(cid, attackName) {
+  const targetId = document.getElementById('grp-target').value;
+  const acVal = document.getElementById('grp-target-ac')?.value;
+  const mode = document.querySelector('input[name="grpmode"]:checked')?.value || 'batch';
+  const body = { combatant_id: cid, target_id: targetId, attack_name: attackName, mode };
+  if (acVal) body.ac_override = parseInt(acVal);
+  if (mode === 'mob') {
+    const ov = document.getElementById('mob-override').value;
+    if (ov) body.override = parseInt(ov);
+  }
+  if (mode === 'average') {
+    body.hits = parseInt(document.getElementById('avg-hits').value || '0');
+  }
+
+  const data = await fetch(`/api/group/${cid}/attack`, {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+  }).then(r => r.json());
+
+  if (!data.ok) {
+    document.getElementById('group-attack-result').innerHTML = `<span class="error-msg">${data.error}</span>`;
+    return;
+  }
+
+  const res = data.result;
+  let html = '';
+  const tgt = ENC.combatants[targetId];
+
+  if (res.batch) {
+    const b = res.batch;
+    html = `<div class="attack-result-block result-hit">
+      <div class="result-label">${b.hits} hits / ${b.crits} crits of ${b.count}</div>`;
+    if (b.damage) {
+      html += renderDamageResult(b.damage);
+      html += `<button class="btn btn-danger" onclick="applyGroupDamageResult('${cid}','${targetId}',${b.damage.grand_total},'','${escJs(attackName)}')">Apply ${b.damage.grand_total}</button>`;
+    }
+    html += '</div>';
+  } else if (res.mob) {
+    const mb = res.mob;
+    html = `<div class="attack-result-block result-hit">
+      <div class="result-label">Mob: needs ${mb.required_roll}+, ${mb.per_hit}/hit → <strong>${mb.hits} hits</strong></div>`;
+    if (mb.damage) {
+      html += renderDamageResult(mb.damage);
+      html += `<button class="btn btn-danger" onclick="applyGroupDamageResult('${cid}','${targetId}',${mb.damage.grand_total},'','${escJs(attackName)}')">Apply ${mb.damage.grand_total}</button>`;
+    }
+    html += '</div>';
+  } else if (res.average) {
+    const av = res.average;
+    const total = Math.round(av.total);
+    html = `<div class="attack-result-block result-hit">
+      <div class="result-label">${av.hits} hits × ${av.avg_per_hit.toFixed(1)} avg = <strong>${total}</strong></div>
+      <button class="btn btn-danger" onclick="applyGroupDamageResult('${cid}','${targetId}',${total},'','${escJs(attackName)}')">Apply ${total}</button>
+    </div>`;
+  }
+
+  document.getElementById('group-attack-result').innerHTML = html;
+  addDiceFeedRaw(`Group ${attackName}: ${JSON.stringify({hits: res.batch?.hits ?? res.mob?.hits ?? res.average?.hits}, null, 0)}`);
+}
+
+async function applyGroupDamageResult(cid, targetId, amount, dtype, attackName) {
+  const c = ENC.combatants[cid];
+  const tgt = ENC.combatants[targetId];
+  const source = c?.name || 'DM';
+  if (tgt?.is_group) {
+    await api(`/api/group/${targetId}/allocate`, 'POST', {
+      mode: 'frontload', amount, damage_type: dtype, attack_name: attackName, source
+    });
+  } else {
+    await api(`/api/combatant/${targetId}/damage`, 'POST', {
+      amount, damage_type: dtype, attack_name: attackName, source
+    });
+  }
+  closeGroupAttackModal();
+}
+
+function closeGroupAttackModal(e) {
+  if (e && e.target !== document.getElementById('group-attack-modal')) return;
+  document.getElementById('group-attack-modal').style.display = 'none';
+}
+
+// ── AoE Spell Modal ───────────────────────────────────────────────────────────
+let _aoe = { casterId: null, casterName: null, baseRoll: null, saves: {}, onSave: 'half', resOverride: {} };
+
+const SAVE_ABILITIES = ['STR','DEX','CON','INT','WIS','CHA'];
+const RES_CYCLE = ['normal', 'resistant', 'immune'];
+
+// Returns effective resistance — override wins over auto-detect
+function aoeResistance(c, damageType) {
+  if (_aoe.resOverride[c.id] != null) return _aoe.resOverride[c.id];
+  const dt = (damageType || '').toLowerCase();
+  if (!dt) return 'normal';
+  if (c.immunities?.toLowerCase().includes(dt)) return 'immune';
+  if (c.resistances?.toLowerCase().includes(dt)) return 'resistant';
+  return 'normal';
+}
+
+function aoeComputeDmg(c, baseRoll, saved, onSave, damageType) {
+  const res = aoeResistance(c, damageType);
+  if (res === 'immune') return 0;
+  let base = saved ? (onSave === 'half' ? Math.floor(baseRoll / 2) : 0) : baseRoll;
+  return res === 'resistant' ? Math.floor(base / 2) : base;
+}
+
+function openAoeModal(casterId, casterName) {
+  _aoe = { casterId, casterName, baseRoll: null, saves: {}, onSave: 'half', resOverride: {}, groupMode: {} };
+  document.getElementById('aoe-caster-name').textContent = casterName;
+
+  const targets = Object.values(ENC.combatants).filter(t =>
+    t.id !== casterId && !['Dead','Fled','Removed'].includes(t.status)
+  );
+
+  const body = document.getElementById('aoe-modal-body');
+  body.innerHTML = `
+    <div class="aoe-inputs">
+      <div class="modal-field-row">
+        <label>Spell</label>
+        <input type="text" id="aoe-spell-name" placeholder="e.g. Fireball" class="aoe-text-input">
+      </div>
+      <div class="modal-field-row">
+        <label>Damage</label>
+        <input type="text" id="aoe-expr" placeholder="e.g. 8d6" style="width:72px">
+        <button class="btn btn-primary btn-sm" onclick="aoeRollDamage()">Roll</button>
+        <span id="aoe-roll-result" class="aoe-roll-total"></span>
+        <span style="color:var(--text-dim);font-size:12px;margin:0 4px">or</span>
+        <input type="number" id="aoe-base-dmg" placeholder="total" style="width:60px"
+          oninput="aoeSetBaseDmg(this.value)">
+        <select id="aoe-dtype" class="dmg-type-sel" onchange="aoeUpdateAll()">
+          ${DMG_TYPES.filter(t=>t).map(t=>`<option value="${t.toLowerCase()}">${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="modal-field-row">
+        <label>Save</label>
+        DC <input type="number" id="aoe-dc" placeholder="DC" style="width:55px">
+        <select id="aoe-save-ability" class="dmg-type-sel" onchange="aoeUpdateAll()">
+          ${SAVE_ABILITIES.map(a=>`<option>${a}</option>`).join('')}
+        </select>
+        <span style="margin-left:10px">On save:</span>
+        <label><input type="radio" name="aoe-onsave" value="half" checked onchange="_aoe.onSave='half';aoeUpdateAll()"> Half</label>
+        <label><input type="radio" name="aoe-onsave" value="none" onchange="_aoe.onSave='none';aoeUpdateAll()"> None</label>
+      </div>
+    </div>
+
+    <div class="aoe-targets-header">
+      <strong>Targets</strong>
+      <button class="btn btn-ghost btn-xs" onclick="aoeSelectAll(true)">All</button>
+      <button class="btn btn-ghost btn-xs" onclick="aoeSelectAll(false)">None</button>
+      <button class="btn btn-ghost btn-xs" onclick="aoeRollAllSaves()">Roll All Saves</button>
+    </div>
+    <div id="aoe-target-list">
+      ${targets.map(t => `
+        <div class="aoe-target-row" id="aoe-row-${t.id}">
+          <label class="aoe-check-label">
+            <input type="checkbox" id="aoe-chk-${t.id}" checked onchange="aoeUpdateRow('${t.id}')">
+            <strong>${escHtml(t.name)}</strong>
+          </label>
+          <button class="aoe-res-badge badge-normal" id="aoe-badge-${t.id}"
+            onclick="aoeToggleRes('${t.id}')" title="Click to override resistance/immunity"></button>
+          ${t.is_group ? `<button class="btn btn-ghost btn-xs aoe-group-mode" id="aoe-gmode-${t.id}"
+            onclick="aoeToggleGroupMode('${t.id}')" title="Split divides total; Each applies full damage to every member">Split ÷</button>` : ''}
+          <button class="btn btn-ghost btn-xs" onclick="aoeRollSave('${t.id}')">Save</button>
+          <span class="aoe-saveroll-result" id="aoe-saveroll-${t.id}"></span>
+          <span class="aoe-save-btns" id="aoe-save-${t.id}">
+            <button class="btn btn-ghost btn-xs" onclick="aoeSetSave('${t.id}',false)">Failed</button>
+            <button class="btn btn-ghost btn-xs" onclick="aoeSetSave('${t.id}',true)">Saved</button>
+          </span>
+          <span id="aoe-dmg-${t.id}" class="aoe-dmg-preview">—</span>
+        </div>`).join('')}
+    </div>
+
+    <div class="aoe-footer">
+      <button class="btn btn-danger" onclick="aoeApplyAll()">Apply All</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeAoeModal()">Cancel</button>
+    </div>
+  `;
+
+  targets.forEach(t => { _aoe.saves[t.id] = null; });
+  aoeUpdateAll();
+  document.getElementById('aoe-modal').style.display = 'flex';
+}
+
+function aoeSetBaseDmg(v) {
+  const n = parseInt(v);
+  _aoe.baseRoll = isNaN(n) || n <= 0 ? null : n;
+  aoeUpdateAll();
+}
+
+async function aoeRollDamage() {
+  const expr = document.getElementById('aoe-expr')?.value?.trim();
+  if (!expr) { alert('Enter a damage expression like 8d6'); return; }
+  const data = await fetch('/api/spell/roll-damage', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ expression: expr })
+  }).then(r => r.json());
+  if (!data.ok) { alert(data.error || 'Roll failed'); return; }
+  _aoe.baseRoll = data.total;
+  document.getElementById('aoe-base-dmg').value = data.total;
+  const rollSpan = document.getElementById('aoe-roll-result');
+  rollSpan.textContent = `[${data.rolls.join('+')}${data.bonus?'+'+data.bonus:''}]`;
+  aoeUpdateAll();
+}
+
+function aoeRollSave(cid) {
+  const dc = parseInt(document.getElementById('aoe-dc')?.value || '0');
+  const ability = document.getElementById('aoe-save-ability')?.value || 'DEX';
+  const c = ENC.combatants[cid];
+  if (!c) return;
+  const mod = c.save_bonuses?.[ability] ?? c.ability_mods?.[ability] ?? 0;
+  const d20 = Math.ceil(Math.random() * 20);
+  const total = d20 + mod;
+  const saved = dc ? total >= dc : null;
+  const vs = dc ? ` vs DC${dc} → ${saved ? 'SAVED' : 'FAILED'}` : '';
+  const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
+  document.getElementById('aoe-saveroll-'+cid).textContent = `d20(${d20})${modStr}=${total}${vs}`;
+  if (saved !== null) {
+    _aoe.saves[cid] = saved;
+    aoeUpdateRow(cid);
+  }
+}
+
+function aoeRollAllSaves() {
+  Object.values(ENC.combatants).forEach(t => {
+    if (t.id === _aoe.casterId) return;
+    const chk = document.getElementById('aoe-chk-'+t.id);
+    if (chk?.checked) aoeRollSave(t.id);
+  });
+}
+
+function aoeToggleRes(cid) {
+  const damageType = document.getElementById('aoe-dtype')?.value || '';
+  const c = ENC.combatants[cid];
+  if (!c) return;
+  // Determine current effective resistance (before override)
+  const auto = (() => {
+    const dt = damageType.toLowerCase();
+    if (dt && c.immunities?.toLowerCase().includes(dt)) return 'immune';
+    if (dt && c.resistances?.toLowerCase().includes(dt)) return 'resistant';
+    return 'normal';
+  })();
+  const current = _aoe.resOverride[cid] ?? auto;
+  const next = RES_CYCLE[(RES_CYCLE.indexOf(current) + 1) % RES_CYCLE.length];
+  // Clear override when cycling back to auto-detected value
+  if (next === auto) {
+    delete _aoe.resOverride[cid];
+  } else {
+    _aoe.resOverride[cid] = next;
+  }
+  aoeUpdateRow(cid);
+}
+
+function aoeUpdateAll() {
+  const damageType = document.getElementById('aoe-dtype')?.value || '';
+  Object.values(ENC.combatants).forEach(t => {
+    if (t.id === _aoe.casterId) return;
+    aoeUpdateRow(t.id, damageType);
+  });
+}
+
+function aoeUpdateRow(cid, damageType) {
+  damageType = damageType ?? document.getElementById('aoe-dtype')?.value ?? '';
+  const c = ENC.combatants[cid];
+  if (!c) return;
+  const checked = document.getElementById('aoe-chk-'+cid)?.checked;
+  const row = document.getElementById('aoe-row-'+cid);
+  if (!row) return;
+
+  // Badge — shows effective resistance, yellow outline if manually overridden
+  const res = aoeResistance(c, damageType);
+  const isOverridden = _aoe.resOverride[cid] != null;
+  const badge = document.getElementById('aoe-badge-'+cid);
+  if (badge) {
+    badge.className = `aoe-res-badge badge-${res}${isOverridden ? ' badge-override' : ''}`;
+    badge.textContent = res === 'normal' ? 'Normal' : res.charAt(0).toUpperCase()+res.slice(1);
+  }
+
+  const dmgEl = document.getElementById('aoe-dmg-'+cid);
+  if (!dmgEl) return;
+  if (!checked) { dmgEl.textContent = '—'; row.style.opacity = '0.4'; return; }
+  row.style.opacity = '1';
+
+  if (!_aoe.baseRoll) { dmgEl.textContent = '(enter damage)'; return; }
+
+  const saved = _aoe.saves[cid];
+  const saveEl = document.getElementById('aoe-save-'+cid);
+  if (saveEl) {
+    if (saved === true) saveEl.className = 'aoe-save-btns aoe-saved';
+    else if (saved === false) saveEl.className = 'aoe-save-btns aoe-failed';
+    else saveEl.className = 'aoe-save-btns';
+  }
+
+  if (res === 'immune') { dmgEl.textContent = '0 (immune)'; return; }
+
+  const finalDmg = aoeComputeDmg(c, _aoe.baseRoll, saved === true, _aoe.onSave, damageType);
+  let label = `${finalDmg} dmg`;
+  if (res === 'resistant') label += ' (resist)';
+  if (saved === true) label += ' (saved)';
+  else if (saved === false) label += ' (failed)';
+  else label += ' (save?)';
+  if (c.is_group) {
+    const living = c.members?.filter(m => !['Down','Dead'].includes(m.status_override)).length || 1;
+    const mode = _aoe.groupMode[cid] || 'split';
+    if (mode === 'each') {
+      label += ` ×${living} members = ${finalDmg * living} total`;
+    } else {
+      const perMember = Math.floor(finalDmg / living);
+      label += ` ÷${living} = ${perMember}ea`;
+    }
+  }
+  dmgEl.textContent = label;
+}
+
+function aoeSetSave(cid, saved) {
+  _aoe.saves[cid] = saved;
+  aoeUpdateRow(cid);
+}
+
+function aoeToggleGroupMode(cid) {
+  _aoe.groupMode[cid] = (_aoe.groupMode[cid] === 'each') ? 'split' : 'each';
+  const btn = document.getElementById('aoe-gmode-'+cid);
+  if (btn) {
+    btn.textContent = _aoe.groupMode[cid] === 'each' ? 'Each ✕' : 'Split ÷';
+    btn.style.color = _aoe.groupMode[cid] === 'each' ? 'var(--red)' : '';
+  }
+  aoeUpdateRow(cid);
+}
+
+function aoeSelectAll(checked) {
+  Object.values(ENC.combatants).forEach(t => {
+    if (t.id === _aoe.casterId) return;
+    const chk = document.getElementById('aoe-chk-'+t.id);
+    if (chk) chk.checked = checked;
+  });
+  aoeUpdateAll();
+}
+
+async function aoeApplyAll() {
+  if (!_aoe.baseRoll) { alert('Enter or roll damage first.'); return; }
+  const spellName = document.getElementById('aoe-spell-name')?.value?.trim() || 'AoE Spell';
+  const damageType = document.getElementById('aoe-dtype')?.value || '';
+  const saveDc = parseInt(document.getElementById('aoe-dc')?.value || '0') || null;
+  const saveAbility = document.getElementById('aoe-save-ability')?.value || 'DEX';
+  const onSave = _aoe.onSave;
+  const casterName = _aoe.casterName;
+
+  const targets = [];
+  document.querySelectorAll('#aoe-target-list .aoe-target-row').forEach(row => {
+    const cid = row.id.replace('aoe-row-', '');
+    const chk = document.getElementById('aoe-chk-'+cid);
+    if (!chk?.checked) return;
+    targets.push({
+      combatant_id: cid,
+      saved: _aoe.saves[cid] === true,
+      res_override: _aoe.resOverride[cid] ?? null,
+      group_mode: _aoe.groupMode[cid] || 'split',
+    });
+  });
+
+  if (!targets.length) { alert('No targets selected.'); return; }
+
+  await api('/api/spell/aoe', 'POST', {
+    source: casterName,
+    spell_name: spellName,
+    damage_roll: _aoe.baseRoll,
+    damage_type: damageType,
+    save_dc: saveDc,
+    save_ability: saveAbility,
+    on_save: onSave,
+    targets,
+  });
+  closeAoeModal();
+}
+
+function closeAoeModal(e) {
+  if (e && e.target !== document.getElementById('aoe-modal')) return;
+  document.getElementById('aoe-modal').style.display = 'none';
+}
+
+// ── Dice feed ─────────────────────────────────────────────────────────────────
+function addDiceFeed(res) {
+  const feed = document.getElementById('dice-feed');
+  let html = `<div class="dice-entry">`;
+  if (res.attack_roll) {
+    const ar = res.attack_roll;
+    const cls = ar.crit ? 'die-crit' : ar.hit ? 'die-hit' : 'die-miss';
+    html += `<div class="die-row"><span class="die-face ${cls}">${ar.d20}</span>`;
+    if (ar.both_dice?.length > 1) html += `<span class="die-both">(${ar.both_dice.join(',')})</span>`;
+    html += ` ${ar.to_hit>=0?'+':''}${ar.to_hit} = ${ar.total}${ar.target_ac?' vs '+ar.target_ac:''}</div>`;
+  }
+  if (res.damage) {
+    for (const clause of (res.damage.clauses||[])) {
+      html += `<div class="die-row die-dmg-row"><span class="die-dmg">[${clause.rolls.join(',')}]</span>`;
+      if (clause.bonus) html += `+${clause.bonus}`;
+      html += ` = ${clause.total} ${clause.damage_type}</div>`;
+    }
+    html += `<div class="die-total">&#9889; ${res.damage.grand_total}</div>`;
+  }
+  feed.insertAdjacentHTML('afterbegin', html + '</div>');
+}
+
+function addDiceFeedRaw(text) {
+  const feed = document.getElementById('dice-feed');
+  feed.insertAdjacentHTML('afterbegin', `<div class="dice-entry dice-raw">${escHtml(text)}</div>`);
+}
+
+function clearDiceFeed() {
+  document.getElementById('dice-feed').innerHTML = '';
+}
+
+// ── Quick damage/heal ──────────────────────────────────────────────────────────
+async function quickDamage(cid) {
+  const amt = parseInt(document.getElementById('dmg-'+cid)?.value || '0');
+  if (!amt) return;
+  const dtype = document.getElementById('dmgtype-'+cid)?.value || '';
+  document.getElementById('dmg-'+cid).value = '';
+  await api(`/api/combatant/${cid}/damage`, 'POST', { amount: amt, damage_type: dtype });
+}
+
+async function quickHeal(cid) {
+  const amt = parseInt(document.getElementById('heal-'+cid)?.value || '0');
+  if (!amt) return;
+  document.getElementById('heal-'+cid).value = '';
+  await api(`/api/combatant/${cid}/heal`, 'POST', { amount: amt });
+}
+
+async function groupDamage(cid) {
+  const amt = parseInt(document.getElementById('dmg-'+cid)?.value || '0');
+  if (!amt) return;
+  const dtype = document.getElementById('dmgtype-'+cid)?.value || '';
+  const mode = document.getElementById('alloc-'+cid)?.value || 'frontload';
+  document.getElementById('dmg-'+cid).value = '';
+  await api(`/api/group/${cid}/allocate`, 'POST', { mode, amount: amt, damage_type: dtype });
+}
+
+async function memberDamage(cid, mid) {
+  const amt = parseInt(document.getElementById('mdmg-'+mid)?.value || '0');
+  if (!amt) return;
+  document.getElementById('mdmg-'+mid).value = '';
+  await api(`/api/combatant/${cid}/damage`, 'POST', { amount: amt, member_id: mid });
+}
+
+async function memberHeal(cid, mid) {
+  const amt = parseInt(document.getElementById('mheal-'+mid)?.value || '0');
+  if (!amt) return;
+  document.getElementById('mheal-'+mid).value = '';
+  await api(`/api/combatant/${cid}/heal`, 'POST', { amount: amt, member_id: mid });
+}
+
+async function memberStatus(cid, mid, status) {
+  await api(`/api/combatant/${cid}/member/${mid}/status`, 'POST', { status: status || null });
+}
+
+async function memberCanAttack(cid, mid, checked) {
+  await api(`/api/combatant/${cid}/member/${mid}/can-attack`, 'POST', { can_attack: checked });
+}
+
+async function setStatus(cid, status) {
+  await api(`/api/combatant/${cid}/status`, 'POST', { status: status || null });
+}
+
+// ── Condition modal ───────────────────────────────────────────────────────────
+function openConditionModal(cid) {
+  _condModalCid = cid;
+  const c = ENC.combatants[cid];
+  document.getElementById('cond-modal-name').textContent = c.name;
+  const grid = document.getElementById('cond-modal-grid');
+  grid.innerHTML = CONDITIONS.map(cond => {
+    const active = c.conditions?.includes(cond);
+    return `<label class="cond-label ${active?'cond-active':''}">
+      <input type="checkbox" ${active?'checked':''} onchange="toggleCondition('${escJs(cond)}',this.checked)"> ${cond}
+    </label>`;
+  }).join('');
+  document.getElementById('condition-modal').style.display = 'flex';
+}
+
+async function toggleCondition(cond, checked) {
+  if (!_condModalCid) return;
+  const note = document.getElementById('cond-duration-note').value;
+  if (checked) {
+    await api('/api/condition', 'POST', { combatant_id: _condModalCid, add: cond, duration_note: note });
+  } else {
+    await api('/api/condition', 'POST', { combatant_id: _condModalCid, remove: cond });
+  }
+}
+
+function closeConditionModal(e) {
+  if (e && e.target !== document.getElementById('condition-modal')) return;
+  document.getElementById('condition-modal').style.display = 'none';
+  _condModalCid = null;
+}
+
+// ── Stat block modal ──────────────────────────────────────────────────────────
+function openStatModal(cid) {
+  const c = ENC.combatants[cid];
+  if (!c) return;
+  document.getElementById('stat-modal-title').textContent = c.name + (c.source_tab ? ` [${c.source_tab}]` : '');
+
+  const scores = c.ability_scores || {};
+  const mods = c.ability_mods || {};
+  const saves = c.save_bonuses || {};
+  const keys = ['STR','DEX','CON','INT','WIS','CHA'];
+
+  let html = `
+  <div class="stat-meta">
+    ${c.size_type_alignment ? `<p class="stat-type">${escHtml(c.size_type_alignment)}</p>` : ''}
+    <div class="stat-line-row">
+      <span><strong>AC</strong> ${c.ac??'—'}</span>
+      <span><strong>HP</strong> ${c.current_hp ?? c.max_hp ?? '—'} / ${c.max_hp??'—'}</span>
+      <span><strong>Speed</strong> ${escHtml(c.speed||'—')}</span>
+      ${c.proficiency_bonus ? `<span><strong>Prof</strong> +${c.proficiency_bonus}</span>` : ''}
+      ${c.initiative_mod ? `<span><strong>Init</strong> ${c.initiative_mod>=0?'+':''}${c.initiative_mod}</span>` : ''}
+    </div>
+  </div>
+
+  <table class="ability-table">
+    <tr><th></th>${keys.map(k=>`<th>${k}</th>`).join('')}</tr>
+    <tr><td class="ab-label">Score</td>${keys.map(k=>`<td>${scores[k]??'—'}</td>`).join('')}</tr>
+    <tr><td class="ab-label">Mod</td>${keys.map(k=>`<td class="mod">${fmtMod(mods[k])}</td>`).join('')}</tr>
+    <tr><td class="ab-label">Save</td>${keys.map(k=>`<td class="mod">${fmtMod(saves[k])}</td>`).join('')}</tr>
+  </table>
+  `;
+
+  if (c.resistances) html += `<p class="stat-line"><strong>Resistances:</strong> ${escHtml(c.resistances)}</p>`;
+  if (c.immunities) html += `<p class="stat-line"><strong>Immunities:</strong> ${escHtml(c.immunities)}</p>`;
+  if (c.condition_immunities) html += `<p class="stat-line"><strong>Cond. Immunities:</strong> ${escHtml(c.condition_immunities)}</p>`;
+  if (c.senses) html += `<p class="stat-line"><strong>Senses:</strong> ${escHtml(c.senses)}</p>`;
+
+  // Attacks table
+  const attacks = (c.attacks||[]).filter(a => a.name && a.name !== 'Name');
+  if (attacks.length) {
+    html += `<h4>Attacks</h4><table class="atk-table">
+      <tr><th>Name</th><th>Type</th><th>To Hit</th><th>Reach</th><th>Damage</th><th>Save</th><th>Effect</th></tr>`;
+    for (const a of attacks) {
+      const dmg = (a.damage_dice||[]).map(d=>`${d.n}d${d.die}${d.bonus?'+'+d.bonus:''} ${d.damage_type}`).join(' + ') || '—';
+      html += `<tr>
+        <td><strong>${escHtml(a.name)}</strong></td>
+        <td>${escHtml(a.attack_type||'')}</td>
+        <td>${a.to_hit!=null?'+'+a.to_hit:'—'}</td>
+        <td>${escHtml(a.reach||'')}</td>
+        <td>${escHtml(dmg)}</td>
+        <td>${a.save_dc?'DC '+a.save_dc+' '+a.save_ability:'—'}</td>
+        <td>${escHtml(a.effect||'')}</td>
+      </tr>`;
+    }
+    html += '</table>';
+  }
+
+  for (const [label, list] of [
+    ['Traits', c.traits||[]],
+    ['Actions', c.actions||[]],
+    ['Bonus Actions', c.bonus_actions||[]],
+    ['Reactions', c.reactions||[]],
+    ['Bloodied', c.bloodied_effects||[]],
+  ]) {
+    const items = list.filter(i => i.name && i.name !== 'Name');
+    if (!items.length) continue;
+    html += `<h4>${label}</h4><ul class="stat-list">`;
+    for (const item of items) {
+      html += `<li><strong>${escHtml(item.name)}</strong>${item.desc ? ': ' + escHtml(item.desc) : ''}</li>`;
+    }
+    html += '</ul>';
+  }
+
+  if (c.limited_use?.length) {
+    html += `<h4>Limited Use</h4><ul class="stat-list">`;
+    for (const lu of c.limited_use) {
+      html += `<li>${escHtml(lu.name)} — ${lu.max_uses-lu.used}/${lu.max_uses} remaining</li>`;
+    }
+    html += '</ul>';
+  }
+
+  html += `<div class="add-lu-row">
+    <input type="text" id="lu-name-${c.id}" placeholder="Ability name">
+    <input type="number" id="lu-max-${c.id}" placeholder="Max uses" min="1" style="width:80px">
+    <button class="btn btn-ghost btn-xs" onclick="addLimitedUse('${c.id}')">+ Add Limited Use</button>
+  </div>`;
+
+  document.getElementById('stat-modal-body').innerHTML = html;
+  document.getElementById('stat-modal').style.display = 'flex';
+}
+
+async function addLimitedUse(cid) {
+  const name = document.getElementById('lu-name-'+cid).value.trim();
+  const maxUses = parseInt(document.getElementById('lu-max-'+cid).value || '0');
+  if (!name || !maxUses) return;
+  await api('/api/limited-use/add', 'POST', { combatant_id: cid, name, max_uses: maxUses });
+  openStatModal(cid);
+}
+
+async function consumeLU(cid, name) {
+  await api('/api/limited-use/consume', 'POST', { combatant_id: cid, ability_name: name });
+}
+
+async function restoreLU(cid, name) {
+  await api('/api/limited-use/restore', 'POST', { combatant_id: cid, ability_name: name });
+}
+
+function closeStatModal(e) {
+  if (e && e.target !== document.getElementById('stat-modal')) return;
+  document.getElementById('stat-modal').style.display = 'none';
+}
+
+// ── Combat Log ─────────────────────────────────────────────────────────────────
+function renderLog() {
+  if (!ENC) return;
+  const log = [...(ENC.log || [])].reverse();
+
+  const rounds = [...new Set(log.map(e => e.round))].sort((a,b)=>b-a);
+  const filterSel = document.getElementById('log-filter-round');
+  const currentFilter = filterSel.value;
+  filterSel.innerHTML = '<option value="">All rounds</option>' +
+    rounds.map(r => `<option value="${r}" ${currentFilter==r?'selected':''}>Round ${r}</option>`).join('');
+
+  const filtered = currentFilter ? log.filter(e => String(e.round) === currentFilter) : log;
+
+  const el = document.getElementById('log-list');
+  if (!filtered.length) { el.innerHTML = '<div class="log-empty">No events yet</div>'; return; }
+
+  el.innerHTML = filtered.map((e, i) => {
+    const isLast = i === 0 && !currentFilter;
+    const dmgClass = e.event_type === 'damage' ? 'log-damage' :
+                     e.event_type === 'heal' ? 'log-heal' : 'log-other';
+    return `<div class="log-row ${dmgClass}">
+  <span class="log-round">R${e.round}T${e.turn}</span>
+  <span class="log-src">${escHtml(e.source)}</span>
+  <span class="log-arrow">&#8594;</span>
+  <span class="log-tgt">${escHtml(e.target)}</span>
+  <span class="log-type">${e.event_type}</span>
+  ${e.amount ? `<span class="log-amt ${e.event_type==='heal'?'heal-amt':'dmg-amt'}">${e.amount}${e.damage_type?' '+e.damage_type:''}</span>` : ''}
+  ${e.attack_name ? `<span class="log-atk">${escHtml(e.attack_name)}</span>` : ''}
+  ${e.notes ? `<span class="log-notes">${escHtml(e.notes)}</span>` : ''}
+  <span class="log-actions">
+    ${isLast ? '<button class="btn btn-danger btn-xs" onclick="api(\'/api/log/undo\',\'POST\')">Undo</button>' : ''}
+    <button class="btn btn-ghost btn-xs" onclick="deleteLog(\'${e.id}\')">&#10006;</button>
+  </span>
+</div>`;
+  }).join('');
+}
+
+function deleteLog(eid) {
+  fetch(`/api/log/${eid}`, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(d => { if (d.encounter) { ENC = d.encounter; render(); } });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escJs(s) {
+  return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+function fmtMod(n) {
+  if (n == null || n === '') return '—';
+  return n >= 0 ? `+${n}` : `${n}`;
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'n' || e.key === 'N') api('/api/turn/next', 'POST');
+  if (e.key === 'p' || e.key === 'P') api('/api/turn/prev', 'POST');
+  if (e.key === 'u' || e.key === 'U') api('/api/log/undo', 'POST');
+  if (e.key === 'r' || e.key === 'R') openDiceRoller();
+  if (e.key === 'd' || e.key === 'D') {
+    const curId = ENC?.current_combatant_id;
+    if (curId) {
+      const inp = document.getElementById('dmg-'+curId) || document.getElementById('pcdmg-'+curId);
+      inp?.focus();
+    }
+  }
+  if (e.key === 'Escape') {
+    ['attack-modal','condition-modal','stat-modal','group-attack-modal','aoe-modal','dice-roller-modal'].forEach(id => {
+      document.getElementById(id).style.display = 'none';
+    });
+    _pendingAttack = null;
+    _condModalCid = null;
+  }
+});
+</script>
+{% endblock %}
