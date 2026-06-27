@@ -264,6 +264,11 @@ def load_encounter(path: str) -> Encounter:
         except ValueError:
             quantity = 1
 
+        # Quantity 0 (or negative) means "leave this one out of the encounter".
+        # Blank quantity still defaults to 1 above.
+        if quantity <= 0:
+            continue
+
         hp_override = None
         try:
             hp_override = int(hp_override_raw) if hp_override_raw else None

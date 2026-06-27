@@ -414,6 +414,51 @@ def allocate_damage_each(
     return events
 
 
+# ── Group heal allocation ─────────────────────────────────────────────────────
+
+def allocate_heal_even(
+    encounter: Encounter,
+    target_id: str,
+    amount: int,
+    source: str = "DM",
+) -> list[LogEvent]:
+    """Split healing evenly (floor, min 1) across living members."""
+    target = encounter.combatants[target_id]
+    living = [
+        m for m in target.members
+        if m.status_override not in ("Dead", "Fled", "Removed")
+    ]
+    if not living:
+        return []
+    per = amount // len(living)
+    if per == 0:
+        per = 1
+    events = []
+    for m in living:
+        events.append(apply_heal(encounter, target_id, per, source=source, member_id=m.id))
+    return events
+
+
+def allocate_heal_each(
+    encounter: Encounter,
+    target_id: str,
+    amount: int,
+    source: str = "DM",
+) -> list[LogEvent]:
+    """Apply the full heal amount to every living member."""
+    target = encounter.combatants[target_id]
+    living = [
+        m for m in target.members
+        if m.status_override not in ("Dead", "Fled", "Removed")
+    ]
+    if not living:
+        return []
+    events = []
+    for m in living:
+        events.append(apply_heal(encounter, target_id, amount, source=source, member_id=m.id))
+    return events
+
+
 # ── Conditions & limited-use ──────────────────────────────────────────────────
 
 def add_condition(

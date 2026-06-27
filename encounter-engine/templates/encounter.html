@@ -163,6 +163,17 @@
   </div>
 </div>
 
+<!-- MASS HEAL MODAL -->
+<div class="modal-overlay" id="massheal-modal" style="display:none" onclick="closeMassHealModal(event)">
+  <div class="modal-box modal-wide" id="massheal-modal-box">
+    <div class="stat-modal-header">
+      <h3>Mass Heal &mdash; <span id="massheal-caster-name"></span></h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeMassHealModal()">&#10006; Close</button>
+    </div>
+    <div id="massheal-modal-body"></div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -181,6 +192,33 @@ const CONDITIONS = [
 
 const DMG_TYPES = ['','Slashing','Piercing','Bludgeoning','Fire','Cold','Lightning','Thunder','Acid','Poison','Psychic','Radiant','Necrotic','Force'];
 const DMG_OPTIONS = DMG_TYPES.map(t => `<option value="${t}">${t||'—'}</option>`).join('');
+
+// Heal targets: every combatant except Hazards/Events (PCs often have no max_hp set,
+// so don't filter on it). Self included and listed first.
+function healTargetsFor(c) {
+  return Object.values(ENC.combatants)
+    .filter(t => !['Hazard','Event'].includes(t.combatant_type) && !['Dead','Fled','Removed'].includes(t.status))
+    .sort((a, b) => (a.id === c.id ? -1 : b.id === c.id ? 1 : 0));
+}
+function healTargetOptions(c) {
+  return healTargetsFor(c)
+    .map(t => `<option value="${t.id}">${escHtml(t.name)}${t.id === c.id ? ' (self)' : ''}</option>`)
+    .join('');
+}
+// Damage-target options, annotated with AC so the DM can pick against the right defense.
+function dmgTargetOptions(targets) {
+  return targets
+    .map(t => `<option value="${t.id}">${escHtml(t.name)}${t.ac != null ? ' — AC ' + t.ac : ''}</option>`)
+    .join('');
+}
+// Parse a damage/heal entry that may be a "+"/"-" sum like "12+20" or "30-5". Returns an integer.
+function parseAmount(raw) {
+  const s = String(raw ?? '').trim();
+  if (!s) return 0;
+  const parts = s.match(/[+-]?\d+/g);
+  if (!parts) return 0;
+  return parts.reduce((sum, n) => sum + parseInt(n, 10), 0);
+}
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 (async function init() {
@@ -302,8 +340,6 @@ function renderPCCard(c, isCurrent) {
   // All living combatants as damage targets (monsters + other PCs)
   const allTargets = Object.values(ENC.combatants)
     .filter(t => t.id !== c.id && !['Dead','Fled','Removed'].includes(t.status));
-  const pcTargets = Object.values(ENC.combatants)
-    .filter(t => t.combatant_type === 'PC' && t.id !== c.id && !['Dead','Fled','Removed'].includes(t.status));
 
   return `<div class="combatant-card pc-card ${currentClass}" id="card-${c.id}">
   <div class="card-header">
@@ -334,38 +370,39 @@ function renderPCCard(c, isCurrent) {
   <!-- DM records damage/heal received by this PC -->
   <div class="pc-received-row">
     <span class="pc-dmg-label">Recv'd:</span>
-    <input type="number" min="0" class="dmg-input" id="pcrecvdmg-${c.id}" placeholder="dmg">
+    <input type="text" inputmode="numeric" class="dmg-input" id="pcrecvdmg-${c.id}" placeholder="dmg">
     <select class="dmg-type-sel" id="pcrecvtype-${c.id}">${DMG_OPTIONS}</select>
     <button class="btn btn-danger btn-sm" onclick="pcReceivesDamage('${c.id}')">Dmg</button>
-    <input type="number" min="0" class="dmg-input" id="pcrecvheal-${c.id}" placeholder="heal">
+    <input type="text" inputmode="numeric" class="dmg-input" id="pcrecvheal-${c.id}" placeholder="heal">
     <button class="btn btn-heal btn-sm" onclick="pcReceivesHeal('${c.id}')">Heal</button>
   </div>
 
   <!-- PC deals damage to any target -->
   <div class="pc-damage-row">
     <span class="pc-dmg-label">Dealt:</span>
-    <input type="number" min="0" class="dmg-input" id="pcdmg-${c.id}" placeholder="dmg">
+    <input type="text" inputmode="numeric" class="dmg-input" id="pcdmg-${c.id}" placeholder="dmg">
     <select class="dmg-type-sel" id="pcdmgtype-${c.id}">${DMG_OPTIONS}</select>
     <span class="pc-dmg-label">to</span>
     <select id="pcdmgtgt-${c.id}" class="dmg-type-sel">
-      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+      ${dmgTargetOptions(allTargets)}
     </select>
     <button class="btn btn-danger btn-sm" onclick="pcDealsDamage('${c.id}')">Apply</button>
   </div>
 
-  <!-- PC heals another PC -->
-  ${pcTargets.length ? `<div class="pc-damage-row">
+  <!-- PC heals self or any ally (PCs, NPCs, allies) -->
+  <div class="pc-damage-row">
     <span class="pc-dmg-label">Heals:</span>
-    <input type="number" min="0" class="dmg-input" id="pcheal-${c.id}" placeholder="heal">
+    <input type="text" inputmode="numeric" class="dmg-input" id="pcheal-${c.id}" placeholder="heal">
     <span class="pc-dmg-label">to</span>
     <select id="pchealtgt-${c.id}" class="dmg-type-sel">
-      ${pcTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+      ${healTargetOptions(c)}
     </select>
     <button class="btn btn-heal btn-sm" onclick="pcHealsTarget('${c.id}')">Heal</button>
-  </div>` : ''}
+  </div>
 
   <div class="pc-damage-row">
     <button class="btn btn-warn btn-sm" onclick="openAoeModal('${c.id}','${escJs(c.name)}')">&#9733; AoE Spell</button>
+    <button class="btn btn-heal btn-sm" onclick="openMassHealModal('${c.id}','${escJs(c.name)}')">&#10010; Mass Heal</button>
   </div>
 
   ${c.notes ? `<div class="card-notes">${escHtml(c.notes)}</div>` : ''}
@@ -373,7 +410,7 @@ function renderPCCard(c, isCurrent) {
 }
 
 async function pcReceivesDamage(pcId) {
-  const amt = parseInt(document.getElementById('pcrecvdmg-'+pcId)?.value || '0');
+  const amt = parseAmount(document.getElementById('pcrecvdmg-'+pcId)?.value || '0');
   if (!amt) return;
   const dtype = document.getElementById('pcrecvtype-'+pcId)?.value || '';
   document.getElementById('pcrecvdmg-'+pcId).value = '';
@@ -381,14 +418,14 @@ async function pcReceivesDamage(pcId) {
 }
 
 async function pcReceivesHeal(pcId) {
-  const amt = parseInt(document.getElementById('pcrecvheal-'+pcId)?.value || '0');
+  const amt = parseAmount(document.getElementById('pcrecvheal-'+pcId)?.value || '0');
   if (!amt) return;
   document.getElementById('pcrecvheal-'+pcId).value = '';
   await api(`/api/combatant/${pcId}/heal`, 'POST', { amount: amt });
 }
 
 async function pcDealsDamage(pcId) {
-  const amt = parseInt(document.getElementById('pcdmg-'+pcId)?.value || '0');
+  const amt = parseAmount(document.getElementById('pcdmg-'+pcId)?.value || '0');
   if (!amt) return;
   const dtype = document.getElementById('pcdmgtype-'+pcId)?.value || '';
   const targetId = document.getElementById('pcdmgtgt-'+pcId)?.value;
@@ -408,7 +445,7 @@ async function pcDealsDamage(pcId) {
 }
 
 async function pcHealsTarget(pcId) {
-  const amt = parseInt(document.getElementById('pcheal-'+pcId)?.value || '0');
+  const amt = parseAmount(document.getElementById('pcheal-'+pcId)?.value || '0');
   if (!amt) return;
   const targetId = document.getElementById('pchealtgt-'+pcId)?.value;
   if (!targetId) return;
@@ -418,7 +455,7 @@ async function pcHealsTarget(pcId) {
 }
 
 async function npcDealsDamage(cid) {
-  const amt = parseInt(document.getElementById('npcdmg-'+cid)?.value || '0');
+  const amt = parseAmount(document.getElementById('npcdmg-'+cid)?.value || '0');
   if (!amt) return;
   const dtype = document.getElementById('npcdmgtype-'+cid)?.value || '';
   const targetId = document.getElementById('npcdmgtgt-'+cid)?.value;
@@ -429,7 +466,7 @@ async function npcDealsDamage(cid) {
 }
 
 async function npcHealsTarget(cid) {
-  const amt = parseInt(document.getElementById('npcheal-'+cid)?.value || '0');
+  const amt = parseAmount(document.getElementById('npcheal-'+cid)?.value || '0');
   if (!amt) return;
   const targetId = document.getElementById('npchealtgt-'+cid)?.value;
   if (!targetId) return;
@@ -487,17 +524,18 @@ function renderMonsterCard(c, isCurrent) {
     ).join('')}
     <button class="btn btn-atk btn-sm" onclick="openRawRollModal('${c.id}')">d20 Roll</button>
     <button class="btn btn-warn btn-sm" onclick="openAoeModal('${c.id}','${escJs(c.name)}')">&#9733; AoE</button>
+    <button class="btn btn-heal btn-sm" onclick="openMassHealModal('${c.id}','${escJs(c.name)}')">&#10010; Mass Heal</button>
   </div>
 
   <!-- Recv damage/heal directly (monsters taking hits or potions) -->
   <div class="damage-row">
     <div class="dmg-group">
-      <input type="number" min="0" class="dmg-input" id="dmg-${c.id}" placeholder="Recv dmg">
+      <input type="text" inputmode="numeric" class="dmg-input" id="dmg-${c.id}" placeholder="Recv dmg">
       <select class="dmg-type-sel" id="dmgtype-${c.id}">${DMG_OPTIONS}</select>
       <button class="btn btn-danger btn-sm" onclick="quickDamage('${c.id}')">Damage</button>
     </div>
     <div class="heal-group">
-      <input type="number" min="0" class="dmg-input" id="heal-${c.id}" placeholder="Recv heal">
+      <input type="text" inputmode="numeric" class="dmg-input" id="heal-${c.id}" placeholder="Recv heal">
       <button class="btn btn-heal btn-sm" onclick="quickHeal('${c.id}')">Heal</button>
     </div>
     <button class="btn btn-ghost btn-xs" onclick="openConditionModal('${c.id}')">Cond</button>
@@ -510,25 +548,25 @@ function renderMonsterCard(c, isCurrent) {
   <!-- Deal damage to another combatant -->
   ${allTargets.length ? `<div class="pc-damage-row">
     <span class="pc-dmg-label">Deals:</span>
-    <input type="number" min="0" class="dmg-input" id="npcdmg-${c.id}" placeholder="dmg">
+    <input type="text" inputmode="numeric" class="dmg-input" id="npcdmg-${c.id}" placeholder="dmg">
     <select class="dmg-type-sel" id="npcdmgtype-${c.id}">${DMG_OPTIONS}</select>
     <span class="pc-dmg-label">to</span>
     <select id="npcdmgtgt-${c.id}" class="dmg-type-sel">
-      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+      ${dmgTargetOptions(allTargets)}
     </select>
     <button class="btn btn-danger btn-sm" onclick="npcDealsDamage('${c.id}')">Apply</button>
   </div>` : ''}
 
-  <!-- Give heal to another combatant -->
-  ${allTargets.length ? `<div class="pc-damage-row">
+  <!-- Give heal to self or any combatant -->
+  <div class="pc-damage-row">
     <span class="pc-dmg-label">Heals:</span>
-    <input type="number" min="0" class="dmg-input" id="npcheal-${c.id}" placeholder="heal">
+    <input type="text" inputmode="numeric" class="dmg-input" id="npcheal-${c.id}" placeholder="heal">
     <span class="pc-dmg-label">to</span>
     <select id="npchealtgt-${c.id}" class="dmg-type-sel">
-      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+      ${healTargetOptions(c)}
     </select>
     <button class="btn btn-heal btn-sm" onclick="npcHealsTarget('${c.id}')">Heal</button>
-  </div>` : ''}
+  </div>
 
   ${renderLimitedUse(c)}
   ${c.notes ? `<div class="card-notes">${escHtml(c.notes)}</div>` : ''}
@@ -577,12 +615,13 @@ function renderGroupCard(c, isCurrent) {
     ).join('')}
     <button class="btn btn-atk btn-sm" onclick="openRawRollModal('${c.id}')">d20 Roll</button>
     <button class="btn btn-warn btn-sm" onclick="openAoeModal('${c.id}','${escJs(c.name)}')">&#9733; AoE</button>
+    <button class="btn btn-heal btn-sm" onclick="openMassHealModal('${c.id}','${escJs(c.name)}')">&#10010; Mass Heal</button>
   </div>
 
   <!-- Group receives damage (split or frontload) -->
   <div class="damage-row">
     <div class="dmg-group">
-      <input type="number" min="0" class="dmg-input" id="dmg-${c.id}" placeholder="Recv dmg">
+      <input type="text" inputmode="numeric" class="dmg-input" id="dmg-${c.id}" placeholder="Recv dmg">
       <select class="dmg-type-sel" id="dmgtype-${c.id}">${DMG_OPTIONS}</select>
       <select id="alloc-${c.id}" class="alloc-sel">
         <option value="frontload">Frontload</option>
@@ -591,7 +630,7 @@ function renderGroupCard(c, isCurrent) {
       <button class="btn btn-danger btn-sm" onclick="groupDamage('${c.id}')">Damage</button>
     </div>
     <div class="heal-group">
-      <input type="number" min="0" class="dmg-input" id="heal-${c.id}" placeholder="Recv heal">
+      <input type="text" inputmode="numeric" class="dmg-input" id="heal-${c.id}" placeholder="Recv heal">
       <button class="btn btn-heal btn-sm" onclick="quickHeal('${c.id}')">Heal</button>
     </div>
     <button class="btn btn-ghost btn-xs" onclick="openConditionModal('${c.id}')">Cond</button>
@@ -604,25 +643,25 @@ function renderGroupCard(c, isCurrent) {
   <!-- Deal damage to another combatant -->
   ${allTargets.length ? `<div class="pc-damage-row">
     <span class="pc-dmg-label">Deals:</span>
-    <input type="number" min="0" class="dmg-input" id="npcdmg-${c.id}" placeholder="dmg">
+    <input type="text" inputmode="numeric" class="dmg-input" id="npcdmg-${c.id}" placeholder="dmg">
     <select class="dmg-type-sel" id="npcdmgtype-${c.id}">${DMG_OPTIONS}</select>
     <span class="pc-dmg-label">to</span>
     <select id="npcdmgtgt-${c.id}" class="dmg-type-sel">
-      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+      ${dmgTargetOptions(allTargets)}
     </select>
     <button class="btn btn-danger btn-sm" onclick="npcDealsDamage('${c.id}')">Apply</button>
   </div>` : ''}
 
-  <!-- Give heal to another combatant -->
-  ${allTargets.length ? `<div class="pc-damage-row">
+  <!-- Give heal to self or any combatant -->
+  <div class="pc-damage-row">
     <span class="pc-dmg-label">Heals:</span>
-    <input type="number" min="0" class="dmg-input" id="npcheal-${c.id}" placeholder="heal">
+    <input type="text" inputmode="numeric" class="dmg-input" id="npcheal-${c.id}" placeholder="heal">
     <span class="pc-dmg-label">to</span>
     <select id="npchealtgt-${c.id}" class="dmg-type-sel">
-      ${allTargets.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('')}
+      ${healTargetOptions(c)}
     </select>
     <button class="btn btn-heal btn-sm" onclick="npcHealsTarget('${c.id}')">Heal</button>
-  </div>` : ''}
+  </div>
 
   <details class="member-details">
     <summary class="member-summary">Members (${(c.members||[]).length})</summary>
@@ -655,9 +694,9 @@ function renderMemberRow(c, m) {
   </div>
   <span class="hp-label-sm">${hp}/${maxHp}</span>
   <div class="member-actions">
-    <input type="number" min="0" class="dmg-input-sm" id="mdmg-${m.id}" placeholder="Dmg">
+    <input type="text" inputmode="numeric" class="dmg-input-sm" id="mdmg-${m.id}" placeholder="Dmg">
     <button class="btn btn-danger btn-xs" onclick="memberDamage('${c.id}','${m.id}')">D</button>
-    <input type="number" min="0" class="dmg-input-sm" id="mheal-${m.id}" placeholder="Heal">
+    <input type="text" inputmode="numeric" class="dmg-input-sm" id="mheal-${m.id}" placeholder="Heal">
     <button class="btn btn-heal btn-xs" onclick="memberHeal('${c.id}','${m.id}')">H</button>
     <select class="status-sel-sm" onchange="memberStatus('${c.id}','${m.id}',this.value)">
       <option value="">—</option>
@@ -1027,6 +1066,7 @@ function openGroupAttackModal(cid, attackName) {
       <label><input type="radio" name="grpmode" value="mob"> Mob</label>
       <label><input type="radio" name="grpmode" value="average"> Average</label>
     </div>
+    <div class="grp-mode-help" id="grp-mode-help"></div>
     <div id="mob-override-row" style="display:none" class="modal-field-row">
       <label>Override hits</label>
       <input type="number" min="0" id="mob-override" placeholder="blank = table">
@@ -1049,10 +1089,19 @@ function openGroupAttackModal(cid, attackName) {
   // Initial fill
   if (targets[0]?.ac) document.getElementById('grp-target-ac').value = targets[0].ac;
 
+  const GRP_MODE_HELP = {
+    batch: 'Batch: rolls a separate d20 to-hit for every attacker in the pool, then rolls damage for each hit individually (crits double that attacker’s dice). Best for ≤ ~10 attackers.',
+    mob: 'Mob: no d20s — estimates how many attackers hit using the 5e mob table (needed roll = AC − to-hit), then rolls damage once per estimated hit. Fast for large swarms. No crits.',
+    average: 'Average: skips all dice — multiplies a fixed number of hits by the attack’s average damage. Fastest, fully deterministic.',
+  };
+  const helpEl = document.getElementById('grp-mode-help');
+  const setHelp = (m) => { helpEl.textContent = GRP_MODE_HELP[m] || ''; };
+  setHelp('batch');
   document.querySelectorAll('input[name="grpmode"]').forEach(r => {
     r.addEventListener('change', () => {
       document.getElementById('mob-override-row').style.display = r.value==='mob'?'flex':'none';
       document.getElementById('avg-hits-row').style.display = r.value==='average'?'flex':'none';
+      setHelp(r.value);
     });
   });
 
@@ -1089,7 +1138,7 @@ async function rollGroupAttack(cid, attackName) {
   if (res.batch) {
     const b = res.batch;
     html = `<div class="attack-result-block result-hit">
-      <div class="result-label">${b.hits} hits / ${b.crits} crits of ${b.count}</div>`;
+      <div class="result-label">${b.hits} hits / ${b.crits} crit${b.crits===1?'':'s'} of ${b.count} attacks${b.crits>0?' <span class="crit-note">(crit dice doubled)</span>':''}</div>`;
     if (b.damage) {
       html += renderDamageResult(b.damage);
       html += `<button class="btn btn-danger" onclick="applyGroupDamageResult('${cid}','${targetId}',${b.damage.grand_total},'','${escJs(attackName)}')">Apply ${b.damage.grand_total}</button>`;
@@ -1162,7 +1211,7 @@ function aoeComputeDmg(c, baseRoll, saved, onSave, damageType) {
 }
 
 function openAoeModal(casterId, casterName) {
-  _aoe = { casterId, casterName, baseRoll: null, saves: {}, onSave: 'half', resOverride: {}, groupMode: {} };
+  _aoe = { casterId, casterName, baseRoll: null, saves: {}, onSave: 'half', resOverride: {}, groupMode: {}, saveAdv: {} };
   document.getElementById('aoe-caster-name').textContent = casterName;
 
   const targets = Object.values(ENC.combatants).filter(t =>
@@ -1190,13 +1239,18 @@ function openAoeModal(casterId, casterName) {
       </div>
       <div class="modal-field-row">
         <label>Save</label>
-        DC <input type="number" id="aoe-dc" placeholder="DC" style="width:55px">
-        <select id="aoe-save-ability" class="dmg-type-sel" onchange="aoeUpdateAll()">
-          ${SAVE_ABILITIES.map(a=>`<option>${a}</option>`).join('')}
-        </select>
-        <span style="margin-left:10px">On save:</span>
-        <label><input type="radio" name="aoe-onsave" value="half" checked onchange="_aoe.onSave='half';aoeUpdateAll()"> Half</label>
-        <label><input type="radio" name="aoe-onsave" value="none" onchange="_aoe.onSave='none';aoeUpdateAll()"> None</label>
+        <span id="aoe-dc-controls">
+          DC <input type="number" id="aoe-dc" placeholder="DC" style="width:55px">
+          <select id="aoe-save-ability" class="dmg-type-sel" onchange="aoeUpdateAll()">
+            ${SAVE_ABILITIES.map(a=>`<option>${a}</option>`).join('')}
+          </select>
+        </span>
+        <span id="aoe-onsave-opts">
+          <span style="margin-left:10px">On save:</span>
+          <label><input type="radio" name="aoe-onsave" value="half" checked onchange="aoeSetSaveMode('half')"> Half</label>
+          <label><input type="radio" name="aoe-onsave" value="none" onchange="aoeSetSaveMode('none')"> None</label>
+        </span>
+        <label style="margin-left:10px"><input type="radio" name="aoe-onsave" value="nosave" onchange="aoeSetSaveMode('nosave')"> No save (auto-hit)</label>
       </div>
     </div>
 
@@ -1204,7 +1258,7 @@ function openAoeModal(casterId, casterName) {
       <strong>Targets</strong>
       <button class="btn btn-ghost btn-xs" onclick="aoeSelectAll(true)">All</button>
       <button class="btn btn-ghost btn-xs" onclick="aoeSelectAll(false)">None</button>
-      <button class="btn btn-ghost btn-xs" onclick="aoeRollAllSaves()">Roll All Saves</button>
+      <button class="btn btn-ghost btn-xs" id="aoe-rollallsaves" onclick="aoeRollAllSaves()">Roll All Saves</button>
     </div>
     <div id="aoe-target-list">
       ${targets.map(t => `
@@ -1217,11 +1271,17 @@ function openAoeModal(casterId, casterName) {
             onclick="aoeToggleRes('${t.id}')" title="Click to override resistance/immunity"></button>
           ${t.is_group ? `<button class="btn btn-ghost btn-xs aoe-group-mode" id="aoe-gmode-${t.id}"
             onclick="aoeToggleGroupMode('${t.id}')" title="Split divides total; Each applies full damage to every member">Split ÷</button>` : ''}
-          <button class="btn btn-ghost btn-xs" onclick="aoeRollSave('${t.id}')">Save</button>
-          <span class="aoe-saveroll-result" id="aoe-saveroll-${t.id}"></span>
-          <span class="aoe-save-btns" id="aoe-save-${t.id}">
-            <button class="btn btn-ghost btn-xs" onclick="aoeSetSave('${t.id}',false)">Failed</button>
-            <button class="btn btn-ghost btn-xs" onclick="aoeSetSave('${t.id}',true)">Saved</button>
+          <span class="aoe-savectl" id="aoe-savectl-${t.id}">
+            <button class="btn btn-ghost btn-xs aoe-advdis" id="aoe-advdis-${t.id}"
+              onclick="aoeCycleAdv('${t.id}')" title="Advantage / disadvantage on this save">—</button>
+            <input type="number" class="aoe-mod-input" id="aoe-savemod-${t.id}" placeholder="±mod"
+              title="Extra save modifier for this target (e.g. a PC's save bonus, Bless, cover)">
+            <button class="btn btn-ghost btn-xs aoe-save-trigger" onclick="aoeRollSave('${t.id}')">Save</button>
+            <span class="aoe-saveroll-result" id="aoe-saveroll-${t.id}"></span>
+            <span class="aoe-save-btns" id="aoe-save-${t.id}">
+              <button class="btn btn-ghost btn-xs" onclick="aoeSetSave('${t.id}',false)">Failed</button>
+              <button class="btn btn-ghost btn-xs" onclick="aoeSetSave('${t.id}',true)">Saved</button>
+            </span>
           </span>
           <span id="aoe-dmg-${t.id}" class="aoe-dmg-preview">—</span>
         </div>`).join('')}
@@ -1260,18 +1320,63 @@ async function aoeRollDamage() {
   aoeUpdateAll();
 }
 
+// Switch between save-based ('half'/'none') and 'nosave' (auto-hit, no saving throw).
+// The DC / Half / None controls stay visible in every mode; only the per-target save
+// adjudication (which is meaningless with no save) is hidden.
+function aoeSetSaveMode(mode) {
+  _aoe.onSave = mode;
+  const nosave = mode === 'nosave';
+  const rollAll = document.getElementById('aoe-rollallsaves');
+  if (rollAll) rollAll.style.display = nosave ? 'none' : '';
+  document.querySelectorAll('#aoe-target-list .aoe-target-row').forEach(row => {
+    const cid = row.id.replace('aoe-row-', '');
+    const ctl = document.getElementById('aoe-savectl-' + cid);
+    if (ctl) ctl.style.display = nosave ? 'none' : '';
+  });
+  aoeUpdateAll();
+}
+
+// Cycle a target's save roll between normal → advantage → disadvantage.
+function aoeCycleAdv(cid) {
+  const cur = _aoe.saveAdv[cid] || 'normal';
+  const next = cur === 'normal' ? 'adv' : (cur === 'adv' ? 'dis' : 'normal');
+  _aoe.saveAdv[cid] = next;
+  const btn = document.getElementById('aoe-advdis-'+cid);
+  if (btn) {
+    btn.textContent = next === 'adv' ? 'ADV' : (next === 'dis' ? 'DIS' : '—');
+    btn.classList.toggle('adv-on', next === 'adv');
+    btn.classList.toggle('dis-on', next === 'dis');
+  }
+}
+
 function aoeRollSave(cid) {
   const dc = parseInt(document.getElementById('aoe-dc')?.value || '0');
   const ability = document.getElementById('aoe-save-ability')?.value || 'DEX';
   const c = ENC.combatants[cid];
   if (!c) return;
-  const mod = c.save_bonuses?.[ability] ?? c.ability_mods?.[ability] ?? 0;
-  const d20 = Math.ceil(Math.random() * 20);
+  const baseMod = c.save_bonuses?.[ability] ?? c.ability_mods?.[ability] ?? 0;
+  const extra = parseInt(document.getElementById('aoe-savemod-'+cid)?.value || '0') || 0;
+  const mod = baseMod + extra;
+
+  const advState = _aoe.saveAdv[cid] || 'normal';
+  const d1 = Math.ceil(Math.random() * 20);
+  let d20, rollDisp;
+  if (advState === 'adv') {
+    d20 = Math.max(d1, Math.ceil(Math.random() * 20));
+    rollDisp = `adv→d20(${d20})`;
+  } else if (advState === 'dis') {
+    d20 = Math.min(d1, Math.ceil(Math.random() * 20));
+    rollDisp = `dis→d20(${d20})`;
+  } else {
+    d20 = d1;
+    rollDisp = `d20(${d20})`;
+  }
+
   const total = d20 + mod;
   const saved = dc ? total >= dc : null;
   const vs = dc ? ` vs DC${dc} → ${saved ? 'SAVED' : 'FAILED'}` : '';
   const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
-  document.getElementById('aoe-saveroll-'+cid).textContent = `d20(${d20})${modStr}=${total}${vs}`;
+  document.getElementById('aoe-saveroll-'+cid).textContent = `${rollDisp}${modStr}=${total}${vs}`;
   if (saved !== null) {
     _aoe.saves[cid] = saved;
     aoeUpdateRow(cid);
@@ -1350,10 +1455,13 @@ function aoeUpdateRow(cid, damageType) {
 
   if (res === 'immune') { dmgEl.textContent = '0 (immune)'; return; }
 
-  const finalDmg = aoeComputeDmg(c, _aoe.baseRoll, saved === true, _aoe.onSave, damageType);
+  const noSave = _aoe.onSave === 'nosave';
+  const effectiveSaved = noSave ? false : (saved === true);
+  const finalDmg = aoeComputeDmg(c, _aoe.baseRoll, effectiveSaved, _aoe.onSave, damageType);
   let label = `${finalDmg} dmg`;
   if (res === 'resistant') label += ' (resist)';
-  if (saved === true) label += ' (saved)';
+  if (noSave) label += ' (no save)';
+  else if (saved === true) label += ' (saved)';
   else if (saved === false) label += ' (failed)';
   else label += ' (save?)';
   if (c.is_group) {
@@ -1402,6 +1510,7 @@ async function aoeApplyAll() {
   const onSave = _aoe.onSave;
   const casterName = _aoe.casterName;
 
+  const noSave = onSave === 'nosave';
   const targets = [];
   document.querySelectorAll('#aoe-target-list .aoe-target-row').forEach(row => {
     const cid = row.id.replace('aoe-row-', '');
@@ -1409,7 +1518,7 @@ async function aoeApplyAll() {
     if (!chk?.checked) return;
     targets.push({
       combatant_id: cid,
-      saved: _aoe.saves[cid] === true,
+      saved: noSave ? false : (_aoe.saves[cid] === true),
       res_override: _aoe.resOverride[cid] ?? null,
       group_mode: _aoe.groupMode[cid] || 'split',
     });
@@ -1433,6 +1542,161 @@ async function aoeApplyAll() {
 function closeAoeModal(e) {
   if (e && e.target !== document.getElementById('aoe-modal')) return;
   document.getElementById('aoe-modal').style.display = 'none';
+}
+
+// ── Mass Heal Modal ─────────────────────────────────────────────────────────────
+let _massheal = { casterId: null, casterName: null, amount: null, groupMode: {} };
+
+function openMassHealModal(casterId, casterName) {
+  _massheal = { casterId, casterName, amount: null, groupMode: {} };
+  document.getElementById('massheal-caster-name').textContent = casterName;
+
+  // Any combatant with an HP pool can be healed, including the caster.
+  const targets = healTargetsFor(ENC.combatants[casterId]);
+
+  const body = document.getElementById('massheal-modal-body');
+  body.innerHTML = `
+    <div class="aoe-inputs">
+      <div class="modal-field-row">
+        <label>Spell</label>
+        <input type="text" id="massheal-spell-name" placeholder="e.g. Mass Cure Wounds" class="aoe-text-input">
+      </div>
+      <div class="modal-field-row">
+        <label>Heal</label>
+        <input type="text" id="massheal-expr" placeholder="e.g. 3d8+5" style="width:72px">
+        <button class="btn btn-primary btn-sm" onclick="massHealRoll()">Roll</button>
+        <span id="massheal-roll-result" class="aoe-roll-total"></span>
+        <span style="color:var(--text-dim);font-size:12px;margin:0 4px">or</span>
+        <input type="number" id="massheal-amount" placeholder="total" style="width:60px"
+          oninput="massHealSetAmount(this.value)">
+      </div>
+    </div>
+
+    <div class="aoe-targets-header">
+      <strong>Targets</strong>
+      <button class="btn btn-ghost btn-xs" onclick="massHealSelectAll(true)">All</button>
+      <button class="btn btn-ghost btn-xs" onclick="massHealSelectAll(false)">None</button>
+    </div>
+    <div id="massheal-target-list">
+      ${targets.map(t => `
+        <div class="aoe-target-row" id="massheal-row-${t.id}">
+          <label class="aoe-check-label">
+            <input type="checkbox" id="massheal-chk-${t.id}" checked onchange="massHealUpdateRow('${t.id}')">
+            <strong>${escHtml(t.name)}${t.id === casterId ? ' (self)' : ''}</strong>
+          </label>
+          ${t.is_group ? `<button class="btn btn-ghost btn-xs aoe-group-mode" id="massheal-gmode-${t.id}"
+            onclick="massHealToggleGroupMode('${t.id}')" title="Split divides total; Each heals every member fully">Split ÷</button>` : ''}
+          <span id="massheal-preview-${t.id}" class="aoe-dmg-preview">—</span>
+        </div>`).join('')}
+    </div>
+
+    <div class="aoe-footer">
+      <button class="btn btn-heal" onclick="massHealApplyAll()">Heal All</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeMassHealModal()">Cancel</button>
+    </div>
+  `;
+
+  massHealUpdateAll();
+  document.getElementById('massheal-modal').style.display = 'flex';
+}
+
+function massHealSetAmount(v) {
+  const n = parseInt(v);
+  _massheal.amount = isNaN(n) || n <= 0 ? null : n;
+  massHealUpdateAll();
+}
+
+async function massHealRoll() {
+  const expr = document.getElementById('massheal-expr')?.value?.trim();
+  if (!expr) { alert('Enter a heal expression like 3d8+5'); return; }
+  const data = await fetch('/api/spell/roll-damage', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ expression: expr })
+  }).then(r => r.json());
+  if (!data.ok) { alert(data.error || 'Roll failed'); return; }
+  _massheal.amount = data.total;
+  document.getElementById('massheal-amount').value = data.total;
+  document.getElementById('massheal-roll-result').textContent =
+    `[${data.rolls.join('+')}${data.bonus?'+'+data.bonus:''}]`;
+  massHealUpdateAll();
+}
+
+function massHealUpdateAll() {
+  document.querySelectorAll('#massheal-target-list .aoe-target-row').forEach(row => {
+    massHealUpdateRow(row.id.replace('massheal-row-', ''));
+  });
+}
+
+function massHealUpdateRow(cid) {
+  const c = ENC.combatants[cid];
+  const row = document.getElementById('massheal-row-'+cid);
+  const previewEl = document.getElementById('massheal-preview-'+cid);
+  if (!c || !row || !previewEl) return;
+  const checked = document.getElementById('massheal-chk-'+cid)?.checked;
+  if (!checked) { previewEl.textContent = '—'; row.style.opacity = '0.4'; return; }
+  row.style.opacity = '1';
+  if (!_massheal.amount) { previewEl.textContent = '(enter heal)'; return; }
+
+  let label = `+${_massheal.amount} HP`;
+  if (c.is_group) {
+    const living = c.members?.filter(m => !['Dead','Fled','Removed'].includes(m.status_override)).length || 1;
+    const mode = _massheal.groupMode[cid] || 'split';
+    if (mode === 'each') {
+      label += ` ×${living} = +${_massheal.amount * living} total`;
+    } else {
+      label += ` ÷${living} = +${Math.max(1, Math.floor(_massheal.amount / living))}ea`;
+    }
+  }
+  previewEl.textContent = label;
+}
+
+function massHealToggleGroupMode(cid) {
+  _massheal.groupMode[cid] = (_massheal.groupMode[cid] === 'each') ? 'split' : 'each';
+  const btn = document.getElementById('massheal-gmode-'+cid);
+  if (btn) {
+    btn.textContent = _massheal.groupMode[cid] === 'each' ? 'Each ✕' : 'Split ÷';
+    btn.style.color = _massheal.groupMode[cid] === 'each' ? 'var(--red)' : '';
+  }
+  massHealUpdateRow(cid);
+}
+
+function massHealSelectAll(checked) {
+  document.querySelectorAll('#massheal-target-list .aoe-target-row').forEach(row => {
+    const cid = row.id.replace('massheal-row-', '');
+    const chk = document.getElementById('massheal-chk-'+cid);
+    if (chk) chk.checked = checked;
+  });
+  massHealUpdateAll();
+}
+
+async function massHealApplyAll() {
+  if (!_massheal.amount) { alert('Enter or roll a heal amount first.'); return; }
+  const spellName = document.getElementById('massheal-spell-name')?.value?.trim() || 'Mass Heal';
+  const targets = [];
+  document.querySelectorAll('#massheal-target-list .aoe-target-row').forEach(row => {
+    const cid = row.id.replace('massheal-row-', '');
+    const chk = document.getElementById('massheal-chk-'+cid);
+    if (!chk?.checked) return;
+    targets.push({
+      combatant_id: cid,
+      group_mode: _massheal.groupMode[cid] || 'split',
+    });
+  });
+  if (!targets.length) { alert('No targets selected.'); return; }
+
+  await api('/api/spell/mass-heal', 'POST', {
+    source: _massheal.casterName,
+    spell_name: spellName,
+    amount: _massheal.amount,
+    targets,
+  });
+  closeMassHealModal();
+}
+
+function closeMassHealModal(e) {
+  if (e && e.target !== document.getElementById('massheal-modal')) return;
+  document.getElementById('massheal-modal').style.display = 'none';
 }
 
 // ── Dice feed ─────────────────────────────────────────────────────────────────
@@ -1468,7 +1732,7 @@ function clearDiceFeed() {
 
 // ── Quick damage/heal ──────────────────────────────────────────────────────────
 async function quickDamage(cid) {
-  const amt = parseInt(document.getElementById('dmg-'+cid)?.value || '0');
+  const amt = parseAmount(document.getElementById('dmg-'+cid)?.value || '0');
   if (!amt) return;
   const dtype = document.getElementById('dmgtype-'+cid)?.value || '';
   document.getElementById('dmg-'+cid).value = '';
@@ -1476,14 +1740,14 @@ async function quickDamage(cid) {
 }
 
 async function quickHeal(cid) {
-  const amt = parseInt(document.getElementById('heal-'+cid)?.value || '0');
+  const amt = parseAmount(document.getElementById('heal-'+cid)?.value || '0');
   if (!amt) return;
   document.getElementById('heal-'+cid).value = '';
   await api(`/api/combatant/${cid}/heal`, 'POST', { amount: amt });
 }
 
 async function groupDamage(cid) {
-  const amt = parseInt(document.getElementById('dmg-'+cid)?.value || '0');
+  const amt = parseAmount(document.getElementById('dmg-'+cid)?.value || '0');
   if (!amt) return;
   const dtype = document.getElementById('dmgtype-'+cid)?.value || '';
   const mode = document.getElementById('alloc-'+cid)?.value || 'frontload';
@@ -1492,14 +1756,14 @@ async function groupDamage(cid) {
 }
 
 async function memberDamage(cid, mid) {
-  const amt = parseInt(document.getElementById('mdmg-'+mid)?.value || '0');
+  const amt = parseAmount(document.getElementById('mdmg-'+mid)?.value || '0');
   if (!amt) return;
   document.getElementById('mdmg-'+mid).value = '';
   await api(`/api/combatant/${cid}/damage`, 'POST', { amount: amt, member_id: mid });
 }
 
 async function memberHeal(cid, mid) {
-  const amt = parseInt(document.getElementById('mheal-'+mid)?.value || '0');
+  const amt = parseAmount(document.getElementById('mheal-'+mid)?.value || '0');
   if (!amt) return;
   document.getElementById('mheal-'+mid).value = '';
   await api(`/api/combatant/${cid}/heal`, 'POST', { amount: amt, member_id: mid });
@@ -1729,8 +1993,9 @@ document.addEventListener('keydown', e => {
     }
   }
   if (e.key === 'Escape') {
-    ['attack-modal','condition-modal','stat-modal','group-attack-modal','aoe-modal','dice-roller-modal'].forEach(id => {
-      document.getElementById(id).style.display = 'none';
+    ['attack-modal','condition-modal','stat-modal','group-attack-modal','aoe-modal','massheal-modal','dice-roller-modal'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
     });
     _pendingAttack = null;
     _condModalCid = null;

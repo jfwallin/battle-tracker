@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battle of Karthmere — Flank Combat</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0d1a;color:#e0d5c0;font-family:'Georgia',serif;min-height:100vh;padding:14px;font-size:15px}
+
+h1{text-align:center;color:#c8a850;font-size:1.35em;letter-spacing:3px;text-transform:uppercase;margin-bottom:2px;text-shadow:0 0 24px rgba(200,168,80,.5)}
+.subtitle{text-align:center;color:#666;font-size:.78em;letter-spacing:2px;margin-bottom:14px;text-transform:uppercase}
+
+/* ── Global Modifiers ──────────────────── */
+.globals{display:flex;flex-wrap:wrap;gap:10px 24px;background:#141422;border:1px solid #2e2e4a;border-radius:8px;padding:10px 14px;margin-bottom:14px;align-items:center}
+.globals-title{width:100%;color:#c8a850;font-size:.75em;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #2e2e4a;padding-bottom:5px;margin-bottom:2px}
+.gtoggle{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:.82em}
+.gtoggle input{cursor:pointer;width:15px;height:15px;accent-color:#c8a850}
+.gon{color:#e87c55}.goff{color:#555}
+
+/* ── Flanks grid ───────────────────────── */
+.flanks{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:680px){.flanks{grid-template-columns:1fr}}
+
+.flank{background:#141422;border:1px solid #2e2e4a;border-radius:8px;padding:12px}
+.flank.hob-collapsed{border-color:#7a0000}
+.flank.elem-collapsed{border-color:#005a7a}
+.flank-title{text-align:center;color:#c8a850;font-size:.9em;letter-spacing:3px;text-transform:uppercase;margin-bottom:11px;padding-bottom:7px;border-bottom:1px solid #2e2e4a}
+
+/* ── Group cards ────────────────────────── */
+.group{background:#0f0f1e;border-radius:6px;padding:10px;margin-bottom:9px}
+.group-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.gname{font-size:.82em;font-weight:bold;letter-spacing:.5px}
+.gname.hob{color:#e0a060}.gname.elem{color:#55b8f0}
+.ghp{font-family:monospace;font-size:.95em;font-weight:bold}
+
+.bar-wrap{background:#222234;border-radius:3px;height:9px;overflow:hidden;margin-bottom:5px}
+.bar{height:100%;border-radius:3px;transition:width .4s ease,background .4s ease}
+
+.group-meta{display:flex;justify-content:space-between;font-size:.73em}
+.state{font-style:italic;color:#aaa}.dmgtier{color:#ffd060;font-weight:bold}
+
+.hpctl{display:flex;gap:5px;margin-top:8px;align-items:center}
+.hpctl input{width:58px;background:#1e1e32;border:1px solid #3a3a5c;border-radius:4px;color:#e0d5c0;font-size:.82em;padding:3px 6px;text-align:center}
+.hpctl input:focus{outline:none;border-color:#c8a850}
+.hpctl label{font-size:.72em;color:#888}
+.btn-d{background:#7a1818;color:#ffc0b0;border:none;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:.75em}
+.btn-h{background:#184a18;color:#b0ffa0;border:none;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:.75em}
+.btn-d:hover{background:#a02020}.btn-h:hover{background:#206020}
+
+/* ── Per-flank modifiers ───────────────── */
+.fmods{display:flex;flex-wrap:wrap;gap:6px 14px;background:#0f0f1e;border-radius:6px;padding:8px;margin-bottom:8px}
+.fmod{display:flex;align-items:center;gap:5px;font-size:.75em;cursor:pointer}
+.fmod input{cursor:pointer;accent-color:#c8a850}
+.fmod.warn{color:#ffcc66}
+.fmod.danger{color:#ff9090}
+
+/* ── Morale alerts ─────────────────────── */
+.morale-alert{background:#2a1500;border:1px solid #884400;border-radius:6px;padding:9px;margin-top:6px;display:none}
+.ma-title{color:#ffaa44;font-size:.8em;font-weight:bold;margin-bottom:4px}
+.ma-sub{font-size:.75em;color:#cc8844;margin-bottom:7px}
+.ma-btns{display:flex;gap:8px}
+.btn-pass{background:#1a3a1a;color:#80e080;border:1px solid #2a6a2a;padding:4px 13px;border-radius:4px;cursor:pointer;font-size:.8em}
+.btn-fail{background:#3a1010;color:#e08080;border:1px solid #6a2020;padding:4px 13px;border-radius:4px;cursor:pointer;font-size:.8em}
+
+/* ── Collapse banners ──────────────────── */
+.cbanner{display:none;text-align:center;font-size:.77em;font-weight:bold;letter-spacing:.5px;margin-top:5px;padding:5px;border-radius:4px}
+.cbanner.hob{background:#3a0000;color:#ff7070;border:1px solid #7a0000}
+.cbanner.elem{background:#003040;color:#70d0ff;border:1px solid #006080}
+
+/* ── Resolve button ────────────────────── */
+.resolve-wrap{text-align:center;margin-bottom:14px}
+.btn-resolve{background:linear-gradient(135deg,#6a1a1a,#b02818);color:#fff;font-family:'Georgia',serif;font-size:1.05em;letter-spacing:3px;text-transform:uppercase;padding:11px 38px;border:none;border-radius:6px;cursor:pointer;box-shadow:0 4px 18px rgba(180,40,24,.45);transition:all .2s}
+.btn-resolve:hover{background:linear-gradient(135deg,#8a2020,#d03020);box-shadow:0 6px 22px rgba(180,40,24,.65)}
+.rnd-sub{color:#555;font-size:.78em;margin-top:6px;letter-spacing:1px}
+
+/* ── Combat log ────────────────────────── */
+.log-wrap{background:#0f0f1e;border:1px solid #2e2e4a;border-radius:8px;padding:11px}
+.log-hdr{color:#c8a850;font-size:.78em;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #2e2e4a;padding-bottom:5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.btn-clear{font-size:.7em;background:#1e1e32;color:#666;border:1px solid #333;border-radius:3px;padding:2px 8px;cursor:pointer}
+.btn-clear:hover{color:#aaa}
+.log-body{max-height:280px;overflow-y:auto;font-family:'Courier New',monospace;font-size:.74em;line-height:1.7;color:#9a9080}
+.log-body::-webkit-scrollbar{width:5px}.log-body::-webkit-scrollbar-track{background:#141422}.log-body::-webkit-scrollbar-thumb{background:#3a3a5c}
+.lr{color:#c8a850;font-weight:bold;margin-top:6px;display:block}
+.lh{color:#e0a060}.le{color:#55b8f0}.lm{color:#e87c55}.lk{color:#ffd060}
+.ll{color:#ff8888;font-weight:bold}.li{color:#666}.lt{color:#ff6060}
+</style>
+</head>
+<body>
+
+<h1>The Battle of Karthmere</h1>
+<p class="subtitle">Flank Combat Tracker — Round <span id="rnum">1</span></p>
+
+<!-- Global Modifiers -->
+<div class="globals">
+  <div class="globals-title">Global Conditions</div>
+  <label class="gtoggle">
+    <input type="checkbox" id="g-korrum" checked onchange="render()">
+    <span id="korrum-lbl" class="gon">Korrum alive — Elementals +10 dmg/flank</span>
+  </label>
+  <label class="gtoggle">
+    <input type="checkbox" id="g-veyrath" checked onchange="render()">
+    <span id="veyrath-lbl" class="gon">Veyrath alive — Hobgoblins +10 fire attrition/flank</span>
+  </label>
+</div>
+
+<!-- ══════════ FLANKS ══════════ -->
+<div class="flanks">
+
+  <!-- LEFT -->
+  <div class="flank" id="fl-left">
+    <div class="flank-title">⚔ Left Flank ⚔</div>
+
+    <div class="group">
+      <div class="group-head">
+        <span class="gname hob">Hobgoblin Battle Group</span>
+        <span class="ghp" id="lh-txt">360 / 360</span>
+      </div>
+      <div class="bar-wrap"><div class="bar" id="lh-bar"></div></div>
+      <div class="group-meta">
+        <span class="state" id="lh-state">Full formation</span>
+        <span class="dmgtier" id="lh-dmg">10d6+30</span>
+      </div>
+      <div class="hpctl">
+        <label>Δ HP:</label>
+        <input type="number" id="lh-in" min="0" placeholder="amount">
+        <button class="btn-d" onclick="adj('left','hob',-1)">Deal</button>
+        <button class="btn-h" onclick="adj('left','hob',+1)">Heal</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head">
+        <span class="gname elem">Elemental Assault Group</span>
+        <span class="ghp" id="le-txt">390 / 390</span>
+      </div>
+      <div class="bar-wrap"><div class="bar" id="le-bar"></div></div>
+      <div class="group-meta">
+        <span class="state" id="le-state">Full elemental assault</span>
+        <span class="dmgtier" id="le-dmg">10d6+50</span>
+      </div>
+      <div class="hpctl">
+        <label>Δ HP:</label>
+        <input type="number" id="le-in" min="0" placeholder="amount">
+        <button class="btn-d" onclick="adj('left','elem',-1)">Deal</button>
+        <button class="btn-h" onclick="adj('left','elem',+1)">Heal</button>
+      </div>
+    </div>
+
+    <div class="fmods">
+      <label class="fmod warn"><input type="checkbox" id="lf-form" checked onchange="render()"> Formation intact (−10 elem dmg)</label>
+      <label class="fmod danger"><input type="checkbox" id="lf-mor" onchange="render()"> Morale failed (−2 dice, no formation)</label>
+      <label class="fmod"><input type="checkbox" id="lf-pc"> PC support this round</label>
+    </div>
+
+    <div class="morale-alert" id="lf-malert">
+      <div class="ma-title" id="lf-mtitle">⚠ Left Flank Morale Check</div>
+      <div class="ma-sub" id="lf-msub">Roll d20 + 5</div>
+      <div class="ma-btns">
+        <button class="btn-pass" onclick="moraleResult('left',true)">Pass</button>
+        <button class="btn-fail" onclick="moraleResult('left',false)">Fail</button>
+      </div>
+    </div>
+    <div class="cbanner hob" id="lh-col">⚠ LEFT HOBGOBLIN FLANK COLLAPSED — Elemental damage redirects to TOWN</div>
+    <div class="cbanner elem" id="le-col">★ LEFT ELEMENTALS DEFEATED — Hobgoblins may redeploy to Right Flank</div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="flank" id="fl-right">
+    <div class="flank-title">⚔ Right Flank ⚔</div>
+
+    <div class="group">
+      <div class="group-head">
+        <span class="gname hob">Hobgoblin Battle Group</span>
+        <span class="ghp" id="rh-txt">360 / 360</span>
+      </div>
+      <div class="bar-wrap"><div class="bar" id="rh-bar"></div></div>
+      <div class="group-meta">
+        <span class="state" id="rh-state">Full formation</span>
+        <span class="dmgtier" id="rh-dmg">10d6+30</span>
+      </div>
+      <div class="hpctl">
+        <label>Δ HP:</label>
+        <input type="number" id="rh-in" min="0" placeholder="amount">
+        <button class="btn-d" onclick="adj('right','hob',-1)">Deal</button>
+        <button class="btn-h" onclick="adj('right','hob',+1)">Heal</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head">
+        <span class="gname elem">Elemental Assault Group</span>
+        <span class="ghp" id="re-txt">390 / 390</span>
+      </div>
+      <div class="bar-wrap"><div class="bar" id="re-bar"></div></div>
+      <div class="group-meta">
+        <span class="state" id="re-state">Full elemental assault</span>
+        <span class="dmgtier" id="re-dmg">10d6+50</span>
+      </div>
+      <div class="hpctl">
+        <label>Δ HP:</label>
+        <input type="number" id="re-in" min="0" placeholder="amount">
+        <button class="btn-d" onclick="adj('right','elem',-1)">Deal</button>
+        <button class="btn-h" onclick="adj('right','elem',+1)">Heal</button>
+      </div>
+    </div>
+
+    <div class="fmods">
+      <label class="fmod warn"><input type="checkbox" id="rf-form" checked onchange="render()"> Formation intact (−10 elem dmg)</label>
+      <label class="fmod danger"><input type="checkbox" id="rf-mor" onchange="render()"> Morale failed (−2 dice, no formation)</label>
+      <label class="fmod"><input type="checkbox" id="rf-pc"> PC support this round</label>
+    </div>
+
+    <div class="morale-alert" id="rf-malert">
+      <div class="ma-title" id="rf-mtitle">⚠ Right Flank Morale Check</div>
+      <div class="ma-sub" id="rf-msub">Roll d20 + 5</div>
+      <div class="ma-btns">
+        <button class="btn-pass" onclick="moraleResult('right',true)">Pass</button>
+        <button class="btn-fail" onclick="moraleResult('right',false)">Fail</button>
+      </div>
+    </div>
+    <div class="cbanner hob" id="rh-col">⚠ RIGHT HOBGOBLIN FLANK COLLAPSED — Elemental damage redirects to TOWN</div>
+    <div class="cbanner elem" id="re-col">★ RIGHT ELEMENTALS DEFEATED — Hobgoblins may redeploy to Left Flank</div>
+  </div>
+
+</div><!-- /flanks -->
+
+<!-- Resolve -->
+<div class="resolve-wrap">
+  <button class="btn-resolve" onclick="resolveRound()">⚔ Resolve Round ⚔</button>
+  <div class="rnd-sub">All flank damage rolled simultaneously at end of round</div>
+</div>
+
+<!-- Log -->
+<div class="log-wrap">
+  <div class="log-hdr">
+    <span>Combat Log</span>
+    <button class="btn-clear" onclick="document.getElementById('log').innerHTML=''">Clear</button>
+  </div>
+  <div class="log-body" id="log"><span class="li">— Waiting for first round —</span></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════ STATE
+const HOB_MAX = 360, ELEM_MAX = 390;
+const MORALE_DCS = [{at:240,dc:12},{at:120,dc:15},{at:60,dc:18}];
+
+const S = {
+  round: 1,
+  left:  { hob:360, elem:390, moraleChecked:new Set() },
+  right: { hob:360, elem:390, moraleChecked:new Set() },
+};
+
+// ═══════════════════════════════════════════════════════════ DICE
+function roll(n, die, bonus=0) {
+  if (n <= 0) return { total: Math.max(0, bonus), rolls:[] };
+  let total = bonus, rolls = [];
+  for (let i=0;i<n;i++){ const r=Math.floor(Math.random()*die)+1; total+=r; rolls.push(r); }
+  return { total:Math.max(0,total), rolls };
+}
+
+// ═══════════════════════════════════════════════════════════ TIERS
+function hobTier(hp) {
+  if (hp<=0) return null;
+  if (hp>=271) return {n:10,die:6,bonus:30,state:'Full formation'};
+  if (hp>=181) return {n:8, die:6,bonus:24,state:'Line strained'};
+  if (hp>=91)  return {n:6, die:6,bonus:18,state:'Heavy casualties'};
+  return              {n:4, die:6,bonus:12,state:'Desperate stand'};
+}
+function elemTier(hp) {
+  if (hp<=0) return null;
+  if (hp>=301) return {n:10,die:6,bonus:50,state:'Full elemental assault'};
+  if (hp>=201) return {n:8, die:6,bonus:40,state:'Assault disrupted'};
+  if (hp>=101) return {n:6, die:6,bonus:30,state:'Elementals separated'};
+  return              {n:4, die:6,bonus:20,state:'Fragmenting survivors'};
+}
+function hpColor(pct) {
+  if (pct>0.60) return '#287828';
+  if (pct>0.30) return '#b07810';
+  return '#8b1818';
+}
+
+// ═══════════════════════════════════════════════════════════ HP CONTROL
+function adj(side, type, dir) {
+  const el = document.getElementById(`${side[0]}${type[0]}-in`);
+  const v = parseInt(el.value)||0;
+  if (v<=0) return;
+  const mx = type==='hob' ? HOB_MAX : ELEM_MAX;
+  S[side][type] = Math.min(mx, Math.max(0, S[side][type] + dir*v));
+  el.value = '';
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════ RENDER
+function render() {
+  document.getElementById('rnum').textContent = S.round;
+  document.getElementById('korrum-lbl').className  = document.getElementById('g-korrum').checked  ? 'gon' : 'goff';
+  document.getElementById('veyrath-lbl').className = document.getElementById('g-veyrath').checked ? 'gon' : 'goff';
+
+  for (const side of ['left','right']) {
+    const s  = side[0];
+    const fl = S[side];
+    const morFailed = document.getElementById(`${s}f-mor`).checked;
+    const formOk    = document.getElementById(`${s}f-form`).checked && !morFailed;
+    const korrum    = document.getElementById('g-korrum').checked;
+
+    // Hob
+    const ht = hobTier(fl.hob);
+    const hobPct = fl.hob / HOB_MAX;
+    document.getElementById(`${s}h-txt`).textContent   = `${fl.hob} / ${HOB_MAX}`;
+    document.getElementById(`${s}h-bar`).style.width   = (hobPct*100)+'%';
+    document.getElementById(`${s}h-bar`).style.background = hpColor(hobPct);
+    if (ht) {
+      const effN = morFailed ? Math.max(0,ht.n-2) : ht.n;
+      document.getElementById(`${s}h-state`).textContent = ht.state + (morFailed?' ⚠ morale failed':'');
+      document.getElementById(`${s}h-dmg`).textContent   = `${effN}d6+${ht.bonus} → defenders`;
+    } else {
+      document.getElementById(`${s}h-state`).textContent = 'FLANK COLLAPSED';
+      document.getElementById(`${s}h-dmg`).textContent   = '—';
+    }
+
+    // Elem
+    const et = elemTier(fl.elem);
+    const elemPct = fl.elem / ELEM_MAX;
+    document.getElementById(`${s}e-txt`).textContent   = `${fl.elem} / ${ELEM_MAX}`;
+    document.getElementById(`${s}e-bar`).style.width   = (elemPct*100)+'%';
+    document.getElementById(`${s}e-bar`).style.background = hpColor(elemPct);
+    if (et) {
+      const effBonus = et.bonus + (korrum?10:0);
+      document.getElementById(`${s}e-state`).textContent = et.state;
+      document.getElementById(`${s}e-dmg`).textContent   = `${et.n}d6+${effBonus} → hob line`;
+    } else {
+      document.getElementById(`${s}e-state`).textContent = 'ELEMENTALS DEFEATED';
+      document.getElementById(`${s}e-dmg`).textContent   = '—';
+    }
+
+    // Formation label
+    if (!formOk && !morFailed) {
+      document.getElementById(`${s}f-form`).checked = false;
+    }
+
+    // Collapse banners
+    document.getElementById(`${s}h-col`).style.display = fl.hob<=0 ? 'block' : 'none';
+    document.getElementById(`${s}e-col`).style.display = fl.elem<=0 ? 'block' : 'none';
+
+    // Flank card border
+    const card = document.getElementById(`fl-${side}`);
+    card.classList.toggle('hob-collapsed',  fl.hob<=0);
+    card.classList.toggle('elem-collapsed', fl.elem<=0);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════ RESOLVE ROUND
+function resolveRound() {
+  const lines = [];
+  lines.push(`<span class="lr">══════ ROUND ${S.round} ══════</span>`);
+
+  const korrum  = document.getElementById('g-korrum').checked;
+  const veyrath = document.getElementById('g-veyrath').checked;
+
+  // Capture pre-resolve state for simultaneous application
+  const dmgToHob   = {left:0, right:0};
+  const hobDmgOut  = {left:0, right:0};
+
+  for (const side of ['left','right']) {
+    const s   = side[0];
+    const fl  = S[side];
+    const lbl = side==='left' ? 'Left' : 'Right';
+    const morFailed = document.getElementById(`${s}f-mor`).checked;
+    const formOk    = document.getElementById(`${s}f-form`).checked && !morFailed;
+
+    // ── ELEMENTAL → HOB ─────────────────────────────────────────────────
+    if (fl.elem > 0 && fl.hob >= 0) {
+      const et = elemTier(fl.elem);
+      const bonus = et.bonus + (korrum ? 10 : 0);
+      const r = roll(et.n, 6, bonus);
+      let dmg = r.total;
+      const kstr = korrum ? `+${et.bonus}+10` : `+${et.bonus}`;
+      lines.push(`<span class="le">${lbl} Elementals [${fl.elem}HP · ${et.state}]:</span> <span class="li">${et.n}d6${kstr} = ${dmg}</span>`);
+      if (korrum) lines.push(`<span class="lk">  ↳ Korrum: +10 elemental pressure</span>`);
+
+      if (fl.hob <= 0) {
+        // Hob already collapsed — redirect to town
+        lines.push(`<span class="lt">  ↳ Hobgoblin flank collapsed — ${dmg} dmg → TOWN BUILDINGS (80 HP each)</span>`);
+        dmg = 0;
+      } else {
+        // Apply formation reduction
+        if (formOk) {
+          const reduced = Math.max(0, dmg - 10);
+          lines.push(`<span class="li">  ↳ Formation defense: ${dmg} − 10 = ${reduced} to hob line</span>`);
+          dmg = reduced;
+        } else if (morFailed) {
+          lines.push(`<span class="lm">  ↳ No formation (morale failed): ${dmg} to hob line</span>`);
+        }
+      }
+      dmgToHob[side] += dmg;
+    }
+
+    // ── VEYRATH ATTRITION → HOB ──────────────────────────────────────────
+    if (veyrath && fl.hob > 0) {
+      dmgToHob[side] += 10;
+      lines.push(`<span class="lm">${lbl} Veyrath fire attrition: +10 to hobgoblin line</span>`);
+    }
+
+    // ── HOB → DEFENDERS ─────────────────────────────────────────────────
+    if (fl.hob > 0) {
+      const ht = hobTier(fl.hob);
+      const effN = morFailed ? Math.max(0,ht.n-2) : ht.n;
+      const r = roll(effN, 6, ht.bonus);
+      hobDmgOut[side] = r.total;
+      const mstr = morFailed ? ` (morale: −2 dice → ${effN}d6)` : '';
+      lines.push(`<span class="lh">${lbl} Hobgoblins [${fl.hob}HP · ${ht.state}]:</span> <span class="li">${effN}d6+${ht.bonus}${mstr} = ${hobDmgOut[side]} → defenders/town</span>`);
+    }
+  }
+
+  // ── APPLY SIMULTANEOUSLY ────────────────────────────────────────────────
+  lines.push(`<span class="li">── Applying damage ──</span>`);
+  for (const side of ['left','right']) {
+    if (dmgToHob[side] > 0) {
+      const fl  = S[side];
+      const lbl = side==='left' ? 'Left' : 'Right';
+      const prev = fl.hob;
+      fl.hob = Math.max(0, fl.hob - dmgToHob[side]);
+      lines.push(`<span class="li">${lbl} Hobgoblins: ${prev} − ${dmgToHob[side]} = <b>${fl.hob}</b> HP</span>`);
+    }
+  }
+
+  // Total defender damage summary
+  const totalDef = hobDmgOut.left + hobDmgOut.right;
+  if (totalDef > 0) {
+    lines.push(`<span class="ll">⚔ Total damage to DEFENDERS this round: ${hobDmgOut.left} (Left) + ${hobDmgOut.right} (Right) = ${totalDef}</span>`);
+  }
+
+  // ── PC SUPPORT ──────────────────────────────────────────────────────────
+  for (const side of ['left','right']) {
+    const s   = side[0];
+    const lbl = side==='left' ? 'Left' : 'Right';
+    if (document.getElementById(`${s}f-pc`).checked) {
+      lines.push(`<span class="lk">⚔ ${lbl} Flank: PC support active — morale check cancelled or existing failure removed</span>`);
+      document.getElementById(`${s}f-pc`).checked = false;
+      // Auto-clear morale failure if present
+      if (document.getElementById(`${s}f-mor`).checked) {
+        document.getElementById(`${s}f-mor`).checked = false;
+        lines.push(`<span class="lk">  ↳ Morale failure cleared by PC intervention</span>`);
+      }
+    }
+  }
+
+  // ── MORALE CHECKS ───────────────────────────────────────────────────────
+  for (const side of ['left','right']) {
+    const s   = side[0];
+    const lbl = side==='left' ? 'Left' : 'Right';
+    const fl  = S[side];
+    const pcSupported = false; // already resolved above
+
+    for (const {at, dc} of MORALE_DCS) {
+      if (fl.hob <= at && fl.hob > 0 && !fl.moraleChecked.has(at)) {
+        fl.moraleChecked.add(at);
+        const alert = document.getElementById(`${s}f-malert`);
+        document.getElementById(`${s}f-mtitle`).textContent = `⚠ ${lbl} Flank Morale Check (HP ≤ ${at})`;
+        document.getElementById(`${s}f-msub`).textContent   = `Roll d20 + 5 vs DC ${dc}`;
+        alert._dc   = dc;
+        alert._side = side;
+        alert.style.display = 'block';
+        lines.push(`<span class="lm">⚠ ${lbl} Flank morale check triggered — HP dropped below ${at} (DC ${dc})!</span>`);
+      }
+    }
+  }
+
+  // ── COLLAPSE EVENTS ──────────────────────────────────────────────────────
+  for (const side of ['left','right']) {
+    const fl  = S[side];
+    const lbl = side==='left' ? 'Left' : 'Right';
+    const opp = side==='left' ? 'Right' : 'Left';
+    if (fl.hob <= 0 && dmgToHob[side] > 0 && fl.hob + dmgToHob[side] > 0) {
+      lines.push(`<span class="ll">💀 ${lbl.toUpperCase()} HOBGOBLIN FLANK COLLAPSED — Elemental damage now hits town buildings!</span>`);
+    }
+  }
+
+  S.round++;
+  logPrepend(lines.join('<br>'));
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════ MORALE RESULT
+function moraleResult(side, passed) {
+  const s   = side[0];
+  const lbl = side==='left' ? 'Left' : 'Right';
+  const alert = document.getElementById(`${s}f-malert`);
+  const dc  = alert._dc || '?';
+  alert.style.display = 'none';
+  if (passed) {
+    logPrepend(`<span class="lk">✓ ${lbl} Flank morale PASSED (DC ${dc}) — formation holds.</span>`);
+  } else {
+    document.getElementById(`${s}f-mor`).checked = true;
+    logPrepend(`<span class="lm">✗ ${lbl} Flank morale FAILED (DC ${dc}) — no formation defense; −2 damage dice until restored.</span>`);
+  }
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════ LOG
+function logPrepend(html) {
+  const el = document.getElementById('log');
+  const was = el.innerHTML === '<span class="li">— Waiting for first round —</span>' ? '' : el.innerHTML;
+  el.innerHTML = html + (was ? '<br>' + was : '');
+}
+
+render();
+</script>
+</body>
+</html>

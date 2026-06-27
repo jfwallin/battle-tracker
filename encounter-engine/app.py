@@ -12,9 +12,9 @@ from engine.models import Encounter, LimitedUse, make_id
 from engine.excel_loader import load_encounter
 from engine.combat import (
     add_condition, allocate_damage_each, allocate_damage_even, allocate_damage_focused,
-    allocate_damage_frontload, apply_damage, apply_heal, apply_temp_hp,
-    check_resistance, consume_limited_use, current_combatant, current_hp,
-    damage_received, delete_log_event, derive_status, group_attack_pool,
+    allocate_damage_frontload, allocate_heal_each, allocate_heal_even, apply_damage,
+    apply_heal, apply_temp_hp, check_resistance, consume_limited_use, current_combatant,
+    current_hp, damage_received, delete_log_event, derive_status, group_attack_pool,
     healing_received, next_round, next_turn, prev_turn, remove_condition,
     restore_limited_use, roll_initiative, set_initiative, sort_initiative,
     undo_last,
@@ -224,12 +224,20 @@ def api_damage(cid):
 @mutate
 def api_heal(cid):
     data = request.get_json(force=True)
-    apply_heal(
-        _encounter, cid,
-        amount=int(data["amount"]),
-        source=data.get("source", "DM"),
-        member_id=data.get("member_id"),
-    )
+    amount = int(data["amount"])
+    source = data.get("source", "DM")
+    member_id = data.get("member_id")
+    target = _encounter.combatants.get(cid)
+    # Group target with no specific member: distribute so group HP actually changes
+    # (group HP is summed from per-member events; a member_id=None heal would be lost).
+    if target is not None and target.is_group and member_id is None:
+        mode = data.get("group_mode", "even")
+        if mode == "each":
+            allocate_heal_each(_encounter, cid, amount, source=source)
+        else:
+            allocate_heal_even(_encounter, cid, amount, source=source)
+    else:
+        apply_heal(_encounter, cid, amount=amount, source=source, member_id=member_id)
 
 
 @app.route("/api/combatant/<cid>/temp-hp", methods=["POST"])
@@ -238,6 +246,33 @@ def api_heal(cid):
 def api_temp_hp(cid):
     data = request.get_json(force=True)
     apply_temp_hp(_encounter, cid, int(data["amount"]))
+
+
+@app.route("/api/combatant/<cid>/stats", methods=["POST"])
+@require_encounter
+@mutate
+def api_set_stats(cid):
+    """Manually edit a combatant's AC and/or Max HP (e.g. to beef up an NPC).
+    These edits live only in the encounter state; they are never written back to Excel."""
+    data = request.get_json(force=True)
+    c = _encounter.combatants.get(cid)
+    if not c:
+        return jsonify({"error": "Unknown combatant"}), 400
+
+    def _to_int_or_none(v):
+        if v is None or v == "":
+            return None
+        return int(v)
+
+    if "ac" in data:
+        c.ac = _to_int_or_none(data["ac"])
+    if "max_hp" in data:
+        new_hp = _to_int_or_none(data["max_hp"])
+        c.max_hp = new_hp
+        # For a group, Max HP is per-member — keep members in sync so group HP totals match.
+        if c.is_group and new_hp is not None:
+            for m in c.members:
+                m.max_hp = new_hp
 
 
 @app.route("/api/combatant/<cid>/status", methods=["POST"])
@@ -436,20 +471,33 @@ def api_group_attack(cid):
     pool = group_attack_pool(c, _encounter.log)
     result = {"mode": mode, "pool": pool, "attack_name": attack_name}
 
+    # Honor a DM-supplied AC (modal pre-fills/edits this; required for PC targets with no stat AC).
+    ac_override = data.get("ac_override")
+    effective_ac = ac_override if ac_override is not None else target.ac
+
     if mode == "batch":
-        if atk.to_hit is None or target.ac is None:
-            return jsonify({"error": "Batch requires to-hit and target AC"}), 400
-        batch = roll_batch(pool, atk.to_hit, target.ac)
+        if atk.to_hit is None or effective_ac is None:
+            return jsonify({"error": "Batch requires to-hit and a target AC"}), 400
+        batch = roll_batch(pool, atk.to_hit, effective_ac)
+        # Roll damage per hitting attack so each crit doubles its OWN dice (not the whole pool).
         if batch["hits"] > 0:
-            dmg = roll_damage(atk.damage_dice * batch["hits"])
-            batch["damage"] = dmg
+            clauses = []
+            grand_total = 0
+            for a in batch["attacks"]:
+                if not a["hit"]:
+                    continue
+                d = roll_damage(atk.damage_dice, crit=a["crit"])
+                grand_total += d["grand_total"]
+                clauses.extend(d["clauses"])
+            batch["damage"] = {"clauses": clauses, "grand_total": grand_total, "crit": batch["crits"] > 0}
         result["batch"] = batch
 
     elif mode == "mob":
-        if atk.to_hit is None or target.ac is None:
-            return jsonify({"error": "Mob requires to-hit and target AC"}), 400
+        if atk.to_hit is None or effective_ac is None:
+            return jsonify({"error": "Mob requires to-hit and a target AC"}), 400
         override = data.get("override")
-        mob = mob_hits(pool, atk.to_hit, target.ac, override=override)
+        mob = mob_hits(pool, atk.to_hit, effective_ac, override=override)
+        # Mob is a statistical estimate (no individual d20s), so there are no crits to double.
         if mob["hits"] > 0:
             dmg = roll_damage(atk.damage_dice * mob["hits"])
             mob["damage"] = dmg
@@ -532,6 +580,32 @@ def api_spell_aoe():
                 allocate_damage_even(_encounter, cid, final_dmg, damage_type, spell_name, source)
         else:
             apply_damage(_encounter, cid, final_dmg, damage_type, spell_name, source)
+
+
+@app.route("/api/spell/mass-heal", methods=["POST"])
+@require_encounter
+@mutate
+def api_spell_mass_heal():
+    """Apply a heal amount to multiple targets at once (Mass Cure Wounds, etc.)."""
+    data = request.get_json(force=True)
+    source = data.get("source", "DM")
+    spell_name = data.get("spell_name", "Mass Heal")
+    amount = int(data["amount"])
+    targets = data.get("targets", [])
+
+    for t in targets:
+        cid = t["combatant_id"]
+        combatant = _encounter.combatants.get(cid)
+        if not combatant:
+            continue
+        if combatant.is_group:
+            group_mode = t.get("group_mode", "even")
+            if group_mode == "each":
+                allocate_heal_each(_encounter, cid, amount, source=source)
+            else:
+                allocate_heal_even(_encounter, cid, amount, source=source)
+        else:
+            apply_heal(_encounter, cid, amount, source=source)
 
 
 # ── Conditions ────────────────────────────────────────────────────────────────

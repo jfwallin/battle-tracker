@@ -225,10 +225,17 @@ a { color: var(--accent); }
 .aoe-text-input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 4px 8px; width: 200px; }
 .aoe-roll-total { font-size: 15px; font-weight: 700; color: var(--yellow); margin-left: 8px; }
 .aoe-targets-header { display: flex; align-items: center; gap: 8px; font-size: 13px; border-top: 1px solid var(--border); padding-top: 8px; margin-bottom: 4px; }
-.aoe-target-row { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 4px; }
+.aoe-target-row { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-radius: 4px; flex-wrap: wrap; }
 .aoe-target-row:hover { background: var(--bg3); }
 .aoe-check-label { display: flex; align-items: center; gap: 6px; min-width: 120px; cursor: pointer; }
-.aoe-dmg-preview { margin-left: auto; font-size: 13px; color: var(--text-dim); min-width: 130px; text-align: right; }
+.aoe-dmg-preview { margin-left: auto; font-size: 13px; color: var(--text-dim); min-width: 120px; text-align: right; }
+.aoe-savectl { display: inline-flex; align-items: center; gap: 6px; }
+.aoe-advdis { min-width: 40px; text-align: center; font-weight: 600; }
+.aoe-advdis.adv-on { background: var(--green); color: #000; border-color: var(--green); }
+.aoe-advdis.dis-on { background: var(--red); color: #fff; border-color: var(--red); }
+.aoe-mod-input { width: 52px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 3px 5px; border-radius: 4px; font-size: 12px; }
+.grp-mode-help { font-size: 12px; color: var(--text-dim); line-height: 1.4; margin: -2px 0 10px; padding: 6px 8px; background: var(--bg3); border-radius: 4px; }
+.crit-note { color: var(--yellow); font-weight: 600; }
 .aoe-save-btns { display: flex; gap: 4px; }
 .aoe-save-btns.aoe-saved button:last-child { background: var(--green); color: #000; border-color: var(--green); }
 .aoe-save-btns.aoe-failed button:first-child { background: var(--red); color: #fff; border-color: var(--red); }
@@ -238,7 +245,7 @@ a { color: var(--accent); }
 .aoe-res-badge.badge-resistant { background: #4a3a00; color: var(--yellow); border-color: #7a6000; }
 .aoe-res-badge.badge-normal   { background: #2a2a2a; color: var(--text-dim); border-color: #444; }
 .aoe-res-badge.badge-override { border-color: var(--yellow) !important; box-shadow: 0 0 0 1px var(--yellow); }
-.aoe-saveroll-result { font-size: 11px; color: var(--text-dim); min-width: 150px; white-space: nowrap; }
+.aoe-saveroll-result { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
 .heal-to-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 
 /* ── Stat block button ────────────────────────────────────────────────────── */
@@ -361,6 +368,8 @@ a { color: var(--accent); }
   padding: 20px; min-width: 340px; max-width: 540px; width: 90%; max-height: 85vh; overflow-y: auto;
 }
 .modal-wide { max-width: 680px; }
+/* AoE modal carries the most per-row controls (resist, adv/dis, mod, save) — give it room. */
+#aoe-modal-box { max-width: 900px; }
 .modal-box h3 { margin-bottom: 14px; font-size: 16px; }
 .modal-body { margin-bottom: 12px; }
 .modal-field-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }

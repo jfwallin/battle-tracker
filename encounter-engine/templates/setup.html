@@ -109,8 +109,11 @@ function renderRoster() {
       <td><span class="type-pill type-${c.combatant_type.toLowerCase()}">${c.combatant_type}</span></td>
       <td>${c.name}${c.is_group ? ' <span class="group-badge">group</span>' : ''}</td>
       <td>${c.source_tab || '—'}</td>
-      <td>${c.ac ?? '—'}</td>
-      <td>${c.max_hp ?? '—'}</td>
+      <td><input type="number" class="init-input" value="${c.ac ?? ''}" placeholder="—"
+           onchange="setStat('${id}', 'ac', this.value)" style="width:55px" title="Edit AC (not saved to Excel)"></td>
+      <td><input type="number" class="init-input" value="${c.max_hp ?? ''}" placeholder="—"
+           onchange="setStat('${id}', 'max_hp', this.value)" style="width:65px"
+           title="${c.is_group ? 'Max HP per member — applies to all in the group' : 'Edit Max HP'} (not saved to Excel)"></td>
       <td><input type="number" class="init-input" value="${c.initiative ?? ''}" placeholder="—"
            onchange="setInit('${id}', this.value)" style="width:55px"></td>
       <td>${c.initiative_mod >= 0 ? '+' : ''}${c.initiative_mod}</td>
@@ -131,6 +134,16 @@ async function setInit(cid, val) {
   });
   const data = await r.json();
   if (data.ok) { _enc = data.encounter; renderInitiativeList(); }
+}
+
+async function setStat(cid, field, val) {
+  const r = await fetch(`/api/combatant/${cid}/stats`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ [field]: val === '' ? null : parseInt(val) })
+  });
+  const data = await r.json();
+  if (data.ok) { _enc = data.encounter; renderRoster(); }
 }
 
 async function rollInitiative(scope) {

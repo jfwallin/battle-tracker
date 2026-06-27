@@ -2,18 +2,19 @@
   "round": 1,
   "turn_index": 0,
   "order": [
-    "f8eb9c67",
-    "9aa06f5f",
-    "ec5a1a94",
-    "b5209d08",
-    "b2df1b93",
-    "32e02fe9",
-    "9fdf72d7",
-    "ba2eb0dd"
+    "24b411ba",
+    "1dd76eb1",
+    "9cc096af",
+    "efb3fc50",
+    "55736068",
+    "b36d9482",
+    "1dc4eb4f",
+    "ccf6a8c2",
+    "bc8df6b2"
   ],
   "combatants": {
-    "f8eb9c67": {
-      "id": "f8eb9c67",
+    "b36d9482": {
+      "id": "b36d9482",
       "name": "Rex",
       "combatant_type": "PC",
       "source_tab": "Rex",
@@ -50,12 +51,12 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "32e02fe9": {
-      "id": "32e02fe9",
+    "9cc096af": {
+      "id": "9cc096af",
       "name": "Prag",
       "combatant_type": "PC",
       "source_tab": "Prag",
-      "initiative": 6,
+      "initiative": 18,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": null,
@@ -88,12 +89,12 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "ba2eb0dd": {
-      "id": "ba2eb0dd",
+    "efb3fc50": {
+      "id": "efb3fc50",
       "name": "Roquist",
       "combatant_type": "PC",
       "source_tab": "Roquist",
-      "initiative": 2,
+      "initiative": 17,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": null,
@@ -126,12 +127,12 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "ec5a1a94": {
-      "id": "ec5a1a94",
+    "1dc4eb4f": {
+      "id": "1dc4eb4f",
       "name": "Giggles",
       "combatant_type": "PC",
       "source_tab": "Giggles",
-      "initiative": 13,
+      "initiative": 11,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": null,
@@ -164,12 +165,12 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "b2df1b93": {
-      "id": "b2df1b93",
+    "ccf6a8c2": {
+      "id": "ccf6a8c2",
       "name": "Shaddow",
       "combatant_type": "PC",
       "source_tab": "Shaddow",
-      "initiative": 8,
+      "initiative": 9,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": null,
@@ -202,15 +203,15 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "b5209d08": {
-      "id": "b5209d08",
+    "24b411ba": {
+      "id": "24b411ba",
       "name": "Korrum",
       "combatant_type": "NPC",
       "source_tab": "Korrum",
-      "initiative": 12,
+      "initiative": 24,
       "initiative_mod": -1,
-      "ac": 18,
-      "max_hp": 285,
+      "ac": 16,
+      "max_hp": 1285,
       "temp_hp": 0,
       "conditions": [],
       "condition_notes": {},
@@ -371,12 +372,12 @@
         }
       ]
     },
-    "9aa06f5f": {
-      "id": "9aa06f5f",
+    "1dd76eb1": {
+      "id": "1dd76eb1",
       "name": "Veyrath",
       "combatant_type": "NPC",
       "source_tab": "Veyrath",
-      "initiative": 15,
+      "initiative": 23,
       "initiative_mod": 6,
       "ac": 17,
       "max_hp": 240,
@@ -540,12 +541,12 @@
         }
       ]
     },
-    "9fdf72d7": {
-      "id": "9fdf72d7",
+    "55736068": {
+      "id": "55736068",
       "name": "Wisp Pack",
       "combatant_type": "NPC",
       "source_tab": null,
-      "initiative": 5,
+      "initiative": 17,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": 10,
@@ -559,7 +560,7 @@
       "is_group": true,
       "members": [
         {
-          "id": "415f99a5",
+          "id": "f23bceaa",
           "name": "Flame Wisp 1",
           "max_hp": 10,
           "conditions": [],
@@ -567,7 +568,7 @@
           "status_override": null
         },
         {
-          "id": "82e6d140",
+          "id": "ae006d02",
           "name": "Flame Wisp 2",
           "max_hp": 10,
           "conditions": [],
@@ -575,7 +576,7 @@
           "status_override": null
         },
         {
-          "id": "69b7d4bc",
+          "id": "ac1bb26a",
           "name": "Flame Wisp 3",
           "max_hp": 10,
           "conditions": [],
@@ -602,9 +603,146 @@
       "bonus_actions": [],
       "reactions": [],
       "bloodied_effects": []
+    },
+    "bc8df6b2": {
+      "id": "bc8df6b2",
+      "name": "red boots",
+      "combatant_type": "NPC",
+      "source_tab": "Hobgoblin",
+      "initiative": 9,
+      "initiative_mod": 1,
+      "ac": 18,
+      "max_hp": 11,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [
+        {
+          "name": "Name",
+          "attack_type": "Type",
+          "to_hit": null,
+          "reach": "Reach / Range",
+          "damage_dice": [],
+          "save_dc": null,
+          "save_ability": "",
+          "effect": "Effect"
+        },
+        {
+          "name": "Longsword",
+          "attack_type": "Melee Weapon",
+          "to_hit": 3,
+          "reach": "5 ft.",
+          "damage_dice": [
+            {
+              "n": 1,
+              "die": 8,
+              "bonus": 1,
+              "damage_type": "slashing"
+            }
+          ],
+          "save_dc": null,
+          "save_ability": "",
+          "effect": ""
+        }
+      ],
+      "limited_use": [],
+      "is_group": true,
+      "members": [
+        {
+          "id": "7713370c",
+          "name": "Hobgoblin 1",
+          "max_hp": 11,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "22c02955",
+          "name": "Hobgoblin 2",
+          "max_hp": 11,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "1c626f3a",
+          "name": "Hobgoblin 3",
+          "max_hp": 11,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "c91fa29e",
+          "name": "Hobgoblin 4",
+          "max_hp": 11,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "bb652ec8",
+          "name": "Hobgoblin 5",
+          "max_hp": 11,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        }
+      ],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "30 ft.",
+      "size_type_alignment": "Medium humanoid (goblinoid), lawful evil",
+      "proficiency_bonus": 2,
+      "ability_scores": {
+        "STR": 13,
+        "DEX": 12,
+        "CON": 12,
+        "INT": 10,
+        "WIS": 10,
+        "CHA": 9
+      },
+      "ability_mods": {
+        "STR": 1,
+        "DEX": 1,
+        "CON": 1,
+        "INT": 0,
+        "WIS": 0,
+        "CHA": -1
+      },
+      "save_bonuses": {
+        "STR": 1,
+        "DEX": 1,
+        "CON": 1,
+        "INT": 0,
+        "WIS": 0,
+        "CHA": -1
+      },
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "darkvision 60 ft., passive Perception 10",
+      "traits": [
+        {
+          "name": "Name",
+          "desc": "Description"
+        },
+        {
+          "name": "Martial Advantage",
+          "desc": "Once per turn, the hobgoblin can deal an extra 2d6 damage to a creature it hits with a weapon attack if that creature is within 5 ft. of an ally of the hobgoblin that isn't incapacitated."
+        }
+      ],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
     }
   },
   "log": [],
-  "source_path": "C:\\Users\\jwallin\\OneDrive\\dnd - elemental crown\\battle tracker\\combat tracker.xlsx",
+  "source_path": "C:\\Users\\jfwal\\OneDrive\\dnd - elemental crown\\battle tracker\\combat tracker.xlsx",
   "started": true
 }
