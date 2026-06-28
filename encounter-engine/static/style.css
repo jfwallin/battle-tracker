@@ -143,6 +143,44 @@ a { color: var(--accent); }
   align-items: center; gap: 12px; padding: 8px 16px;
   box-shadow: 0 2px 12px #0008;
 }
+/* Enemy status strip */
+.enemy-strip { position: sticky; top: 56px; z-index: 90; }
+.enemy-strip:empty { display: none; }
+.enemy-strip-inner { display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  background: var(--bg2); border-bottom: 1px solid var(--border); padding: 6px 16px; }
+.enemy-strip-inner.all-down { background: #16331f; border-bottom-color: var(--green, #4caf6a); }
+.enemy-count { font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 6px; }
+.all-down .enemy-count { color: var(--green, #6ed08a); }
+.enemy-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+  padding: 2px 8px; border-radius: 12px; background: var(--bg3); border: 1px solid var(--border); }
+.enemy-pill .enemy-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green, #4caf6a); }
+.enemy-pill.bloodied .enemy-dot { background: var(--yellow, #e0c24a); }
+.enemy-pill.down { opacity: 0.5; text-decoration: line-through; }
+.enemy-pill.down .enemy-dot { background: var(--red, #c0392b); }
+.enemy-pill .enemy-hp { color: var(--text-dim); font-size: 11px; }
+.enemy-pill .enemy-sub { color: var(--text-dim); }
+
+/* Batch attack: per-attacker roll chips + recount */
+.batch-acrow { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 8px; }
+.batch-acrow input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 3px 5px; }
+.roll-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+.roll-chip { font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg3); color: var(--text-dim); }
+.roll-chip.roll-hit { background: #16331f; color: #cfe9d6; border-color: #2e6b40; }
+.roll-chip.roll-crit { background: #4a3a00; color: var(--yellow, #e0c24a); border-color: #7a6000; font-weight: 700; }
+.roll-chip.roll-miss { opacity: 0.6; }
+.roll-chip.nat20 { box-shadow: 0 0 0 1px var(--yellow, #e0c24a); }
+.roll-chip b { color: var(--text); }
+
+/* Group attack: split-across-targets allocation + per-segment results */
+.grp-alloc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-dim); margin: 8px 0 4px; }
+.grp-alloc-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.grp-alloc-row select, .grp-alloc-row input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 4px 6px; font-size: 13px; }
+.grp-alloc-row select { flex: 1; }
+.seg-summary { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+.seg-block { margin-bottom: 10px; }
+.seg-head { font-size: 13px; margin-bottom: 4px; }
+.seg-applied { color: var(--green, #6ed08a); font-size: 13px; font-weight: 600; }
+
 .banner-left { text-align: center; }
 .round-label { display: block; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
 .round-num { font-size: 32px; font-weight: 800; color: var(--accent); line-height: 1; }

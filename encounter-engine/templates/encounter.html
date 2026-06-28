@@ -27,9 +27,13 @@
     </div>
   </div>
   <div class="banner-far-right">
+    <button class="btn btn-ghost btn-sm" onclick="exportReport()" title="Export battle report (Scorecard + Detailed Log)">&#128203; Report</button>
     <button class="btn btn-ghost btn-sm" onclick="window.location.href='/'">&#8592; Setup</button>
   </div>
 </div>
+
+<!-- ENEMY STATUS STRIP -->
+<div class="enemy-strip" id="enemy-strip"></div>
 
 <!-- MAIN LAYOUT -->
 <div class="encounter-layout">
@@ -242,9 +246,38 @@ async function api(url, method='POST', body=null) {
 // ── Master render ─────────────────────────────────────────────────────────────
 function render() {
   renderBanner();
+  renderEnemyStrip();
   renderCombatants();
   renderLog();
   renderRoundSummary();
+}
+
+// ── Enemy status strip ──────────────────────────────────────────────────────────
+function renderEnemyStrip() {
+  const el = document.getElementById('enemy-strip');
+  if (!el || !ENC) return;
+  const enemies = ENC.order.map(id => ENC.combatants[id]).filter(c => c && c.combatant_type === 'NPC');
+  if (!enemies.length) { el.innerHTML = ''; return; }
+  const isDown = c => ['Down','Dead','Fled','Removed'].includes(c.status) || (c.current_hp ?? 1) <= 0;
+  const upCount = enemies.filter(c => !isDown(c)).length;
+  const pills = enemies.map(c => {
+    const down = isDown(c);
+    const max = effectiveMaxHp(c);
+    let label = escHtml(c.name);
+    if (c.is_group) {
+      const alive = (c.members||[]).filter(m =>
+        !['Down','Dead','Fled','Removed'].includes(m.status_override) && (m.current_hp ?? m.max_hp) > 0).length;
+      label += ` <span class="enemy-sub">${alive}/${(c.members||[]).length}</span>`;
+    }
+    const hp = max ? ` <span class="enemy-hp">${c.current_hp ?? '—'}/${max}</span>` : '';
+    const cls = down ? 'down' : (c.status === 'Bloodied' ? 'bloodied' : 'active');
+    return `<span class="enemy-pill ${cls}" title="${escHtml(c.status)}"><span class="enemy-dot"></span>${label}${hp}</span>`;
+  }).join('');
+  const allDown = upCount === 0;
+  el.innerHTML = `<div class="enemy-strip-inner${allDown ? ' all-down' : ''}">
+    <span class="enemy-count">${allDown ? '✓ ALL ENEMIES DOWN' : `Enemies up ${upCount}/${enemies.length}`}</span>
+    ${pills}
+  </div>`;
 }
 
 // ── Banner ────────────────────────────────────────────────────────────────────
@@ -932,11 +965,14 @@ async function rollAttackModal() {
         html += `<button class="btn btn-danger" onclick="applyAttackDamage()">Apply ${res.damage.grand_total} damage</button>`;
       } else {
         html += `<button class="btn btn-danger" onclick="applyAttackDamage()">Apply ${res.damage.grand_total} (HIT)</button>`;
-        html += `<button class="btn btn-ghost btn-sm" onclick="closeAttackModal()">Miss — discard</button>`;
+        html += `<button class="btn btn-ghost btn-sm" onclick="logAttackMiss()">Log Miss</button>`;
       }
     } else if (ar.hit || isPC || noAC) {
       // No damage dice — just show the roll
       html += `<div class="result-note">No damage dice — apply manually if needed</div>`;
+    } else {
+      // Clear miss (known AC, not a hit) — record it for the battle report.
+      html += `<button class="btn btn-ghost btn-sm" onclick="logAttackMiss()">Log Miss</button>`;
     }
 
     html += '</div>';
@@ -1028,6 +1064,11 @@ async function applyAttackDamage(half=false) {
   const dtype = res.damage?.clauses?.[0]?.damage_type || '';
   const tgt = ENC.combatants[res.target_id];
   const source = ENC.combatants[_pendingAttack.combatant_id]?.name || 'DM';
+  // Outcome/roll for the battle report.
+  const ar = res.attack_roll;
+  let outcome = '', roll = null;
+  if (ar) { outcome = ar.crit ? 'crit' : 'hit'; roll = ar.total; }
+  else if (res.save_dc) { outcome = half ? 'saved' : 'failed'; }
   if (tgt?.is_group) {
     await api(`/api/group/${res.target_id}/allocate`, 'POST', {
       mode: 'frontload', amount, damage_type: dtype, attack_name: res.attack_name, source
@@ -1035,10 +1076,36 @@ async function applyAttackDamage(half=false) {
   } else {
     await api('/api/attack/apply', 'POST', {
       target_id: res.target_id, amount, damage_type: dtype,
-      attack_name: res.attack_name, source
+      attack_name: res.attack_name, source, outcome, roll
     });
   }
   closeAttackModal();
+}
+
+async function logAttackMiss() {
+  if (!_pendingAttack?.result) { closeAttackModal(); return; }
+  const res = _pendingAttack.result;
+  const source = ENC.combatants[_pendingAttack.combatant_id]?.name || 'DM';
+  await api('/api/attack/log-miss', 'POST', {
+    target_id: res.target_id, attack_name: res.attack_name, source,
+    roll: res.attack_roll?.total ?? null,
+  });
+  closeAttackModal();
+}
+
+// ── Battle report export ────────────────────────────────────────────────────────
+async function exportReport() {
+  const dir = (ENC?.source_path || '').replace(/[^\\/]*$/, '');
+  const def = (dir || '') + 'battle_report.xlsx';
+  const path = prompt('Save battle report to (full .xlsx path):', def);
+  if (!path) return;
+  const playerSafe = confirm('Player-safe version?\nOK = hide DM notes and still-hidden creatures.\nCancel = full DM report.');
+  const data = await (await fetch('/api/export-report', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ path, player_safe: playerSafe })
+  })).json();
+  if (data.ok) alert('Report saved:\n' + data.path);
+  else alert('Export failed: ' + (data.error || 'unknown'));
 }
 
 function closeAttackModal(e) {
@@ -1048,144 +1115,244 @@ function closeAttackModal(e) {
 }
 
 // ── Group attack modal ────────────────────────────────────────────────────────
+// Group attack split across targets: allocation state + per-segment results.
+let _grp = null;
+let _segments = [];
+const GRP_MODE_HELP = {
+  batch: 'Batch: a separate d20 per attacker, damage rolled per hit (crits double that attacker’s dice). Each attacker hits one target — shows who hit whom. Best for ≤ ~10.',
+  mob: 'Mob: no d20s — estimates hits per target from the 5e mob table, then rolls damage per hit. Aggregate (no individual rolls). Fast for large swarms.',
+  average: 'Average: skips dice — hits × average damage per target. Fully deterministic.',
+};
+
 function openGroupAttackModal(cid, attackName) {
   const c = ENC.combatants[cid];
   if (!c) return;
   const pool = c.attack_pool ?? 0;
-  const targets = Object.values(ENC.combatants).filter(t =>
-    t.id !== cid && !['Dead','Fled','Removed'].includes(t.status)
-  );
+  const opts = Object.values(ENC.combatants)
+    .filter(t => t.id !== cid && !['Dead','Fled','Removed'].includes(t.status))
+    .map(t => ({ id: t.id, name: t.name, ac: t.ac, isPC: t.combatant_type === 'PC' }));
 
-  document.getElementById('group-attack-title').textContent = `${c.name} — ${attackName} (pool: ${pool})`;
+  _grp = { cid, attackName, pool, mode: 'batch', options: opts, targets: [] };
+  if (opts[0]) _grp.targets.push({ target_id: opts[0].id, count: pool, ac: opts[0].ac ?? '' });
+
+  document.getElementById('group-attack-title').textContent = `${c.name} — ${attackName}`;
   document.getElementById('group-attack-body').innerHTML = `
     <div class="modal-field-row">
-      <label>Target</label>
-      <select id="grp-target">
-        ${targets.map(t => `<option value="${t.id}">${escHtml(t.name)} ${t.combatant_type==='PC'?'(PC)':'AC '+(t.ac??'?')}</option>`).join('')}
-      </select>
-    </div>
-    <div class="modal-field-row">
-      <label>Target AC</label>
-      <input type="number" id="grp-target-ac" placeholder="AC" style="width:60px">
-    </div>
-    <div class="modal-field-row">
       <label>Mode</label>
-      <label><input type="radio" name="grpmode" value="batch" checked> Batch</label>
-      <label><input type="radio" name="grpmode" value="mob"> Mob</label>
-      <label><input type="radio" name="grpmode" value="average"> Average</label>
+      <label><input type="radio" name="grpmode" value="batch" checked onchange="grpSetMode('batch')"> Batch</label>
+      <label><input type="radio" name="grpmode" value="mob" onchange="grpSetMode('mob')"> Mob</label>
+      <label><input type="radio" name="grpmode" value="average" onchange="grpSetMode('average')"> Average</label>
     </div>
     <div class="grp-mode-help" id="grp-mode-help"></div>
-    <div id="mob-override-row" style="display:none" class="modal-field-row">
-      <label>Override hits</label>
-      <input type="number" min="0" id="mob-override" placeholder="blank = table">
+    <div class="grp-alloc-head">
+      <span>Targets — assign attackers (pool <b>${pool}</b>, remaining <b id="grp-remaining">${pool}</b>)</span>
+      <button class="btn btn-ghost btn-xs" onclick="grpAddTarget()">+ Add target</button>
     </div>
-    <div id="avg-hits-row" style="display:none" class="modal-field-row">
-      <label>Hits</label>
-      <input type="number" min="0" id="avg-hits" value="${pool}">
-    </div>
-    <button class="btn btn-primary" onclick="rollGroupAttack('${cid}','${escJs(attackName)}')">Roll</button>
+    <div id="grp-targets"></div>
+    <button class="btn btn-primary" style="margin-top:10px" onclick="rollGroupAttack()">Roll</button>
     <div id="group-attack-result" style="margin-top:12px"></div>
   `;
-
-  // Pre-fill target AC when selection changes
-  const grpSel = document.getElementById('grp-target');
-  grpSel.addEventListener('change', () => {
-    const tgt = ENC.combatants[grpSel.value];
-    if (tgt?.ac) document.getElementById('grp-target-ac').value = tgt.ac;
-    else document.getElementById('grp-target-ac').value = '';
-  });
-  // Initial fill
-  if (targets[0]?.ac) document.getElementById('grp-target-ac').value = targets[0].ac;
-
-  const GRP_MODE_HELP = {
-    batch: 'Batch: rolls a separate d20 to-hit for every attacker in the pool, then rolls damage for each hit individually (crits double that attacker’s dice). Best for ≤ ~10 attackers.',
-    mob: 'Mob: no d20s — estimates how many attackers hit using the 5e mob table (needed roll = AC − to-hit), then rolls damage once per estimated hit. Fast for large swarms. No crits.',
-    average: 'Average: skips all dice — multiplies a fixed number of hits by the attack’s average damage. Fastest, fully deterministic.',
-  };
-  const helpEl = document.getElementById('grp-mode-help');
-  const setHelp = (m) => { helpEl.textContent = GRP_MODE_HELP[m] || ''; };
-  setHelp('batch');
-  document.querySelectorAll('input[name="grpmode"]').forEach(r => {
-    r.addEventListener('change', () => {
-      document.getElementById('mob-override-row').style.display = r.value==='mob'?'flex':'none';
-      document.getElementById('avg-hits-row').style.display = r.value==='average'?'flex':'none';
-      setHelp(r.value);
-    });
-  });
-
+  grpSetMode('batch');
+  renderGrpTargets();
   document.getElementById('group-attack-modal').style.display = 'flex';
 }
 
-async function rollGroupAttack(cid, attackName) {
-  const targetId = document.getElementById('grp-target').value;
-  const acVal = document.getElementById('grp-target-ac')?.value;
-  const mode = document.querySelector('input[name="grpmode"]:checked')?.value || 'batch';
-  const body = { combatant_id: cid, target_id: targetId, attack_name: attackName, mode };
-  if (acVal) body.ac_override = parseInt(acVal);
-  if (mode === 'mob') {
-    const ov = document.getElementById('mob-override').value;
-    if (ov) body.override = parseInt(ov);
-  }
-  if (mode === 'average') {
-    body.hits = parseInt(document.getElementById('avg-hits').value || '0');
-  }
-
-  const data = await fetch(`/api/group/${cid}/attack`, {
-    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
-  }).then(r => r.json());
-
-  if (!data.ok) {
-    document.getElementById('group-attack-result').innerHTML = `<span class="error-msg">${data.error}</span>`;
-    return;
-  }
-
-  const res = data.result;
-  let html = '';
-  const tgt = ENC.combatants[targetId];
-
-  if (res.batch) {
-    const b = res.batch;
-    html = `<div class="attack-result-block result-hit">
-      <div class="result-label">${b.hits} hits / ${b.crits} crit${b.crits===1?'':'s'} of ${b.count} attacks${b.crits>0?' <span class="crit-note">(crit dice doubled)</span>':''}</div>`;
-    if (b.damage) {
-      html += renderDamageResult(b.damage);
-      html += `<button class="btn btn-danger" onclick="applyGroupDamageResult('${cid}','${targetId}',${b.damage.grand_total},'','${escJs(attackName)}')">Apply ${b.damage.grand_total}</button>`;
-    }
-    html += '</div>';
-  } else if (res.mob) {
-    const mb = res.mob;
-    html = `<div class="attack-result-block result-hit">
-      <div class="result-label">Mob: needs ${mb.required_roll}+, ${mb.per_hit}/hit → <strong>${mb.hits} hits</strong></div>`;
-    if (mb.damage) {
-      html += renderDamageResult(mb.damage);
-      html += `<button class="btn btn-danger" onclick="applyGroupDamageResult('${cid}','${targetId}',${mb.damage.grand_total},'','${escJs(attackName)}')">Apply ${mb.damage.grand_total}</button>`;
-    }
-    html += '</div>';
-  } else if (res.average) {
-    const av = res.average;
-    const total = Math.round(av.total);
-    html = `<div class="attack-result-block result-hit">
-      <div class="result-label">${av.hits} hits × ${av.avg_per_hit.toFixed(1)} avg = <strong>${total}</strong></div>
-      <button class="btn btn-danger" onclick="applyGroupDamageResult('${cid}','${targetId}',${total},'','${escJs(attackName)}')">Apply ${total}</button>
-    </div>`;
-  }
-
-  document.getElementById('group-attack-result').innerHTML = html;
-  addDiceFeedRaw(`Group ${attackName}: ${JSON.stringify({hits: res.batch?.hits ?? res.mob?.hits ?? res.average?.hits}, null, 0)}`);
+function grpSetMode(m) {
+  if (_grp) _grp.mode = m;
+  const el = document.getElementById('grp-mode-help');
+  if (el) el.textContent = GRP_MODE_HELP[m] || '';
 }
 
-async function applyGroupDamageResult(cid, targetId, amount, dtype, attackName) {
+function renderGrpTargets() {
+  const el = document.getElementById('grp-targets');
+  if (!el) return;
+  const opts = _grp.options;
+  el.innerHTML = _grp.targets.map((row, i) => `
+    <div class="grp-alloc-row">
+      <select onchange="grpSetField(${i},'target_id',this.value)">
+        ${opts.map(o => `<option value="${o.id}" ${o.id===row.target_id?'selected':''}>${escHtml(o.name)} ${o.isPC?'(PC)':'AC '+(o.ac??'?')}</option>`).join('')}
+      </select>
+      <input type="number" min="1" value="${row.count}" style="width:54px" title="# attackers"
+        oninput="grpSetField(${i},'count',this.value)">
+      <input type="number" value="${row.ac ?? ''}" placeholder="AC" style="width:54px" title="target AC"
+        oninput="grpSetField(${i},'ac',this.value)">
+      ${_grp.targets.length > 1 ? `<button class="btn btn-ghost btn-xs" onclick="grpRemoveTarget(${i})">✕</button>` : ''}
+    </div>`).join('');
+  grpUpdateTally();
+}
+
+function grpSetField(i, field, val) {
+  if (field === 'target_id') {
+    _grp.targets[i].target_id = val;
+    const o = _grp.options.find(x => x.id === val);
+    _grp.targets[i].ac = o?.ac ?? '';
+    renderGrpTargets();   // refresh the AC field for the new target
+    return;
+  }
+  _grp.targets[i][field] = (field === 'count') ? (parseInt(val) || 0) : val;
+  grpUpdateTally();
+}
+
+function grpUpdateTally() {
+  const assigned = _grp.targets.reduce((s, r) => s + (parseInt(r.count) || 0), 0);
+  const el = document.getElementById('grp-remaining');
+  if (el) { const rem = _grp.pool - assigned; el.textContent = rem; el.style.color = rem < 0 ? 'var(--red)' : ''; }
+}
+
+function grpAddTarget() {
+  const assigned = _grp.targets.reduce((s, r) => s + (parseInt(r.count) || 0), 0);
+  const used = new Set(_grp.targets.map(r => r.target_id));
+  const next = _grp.options.find(o => !used.has(o.id)) || _grp.options[0];
+  if (!next) return;
+  _grp.targets.push({ target_id: next.id, count: Math.max(1, _grp.pool - assigned), ac: next.ac ?? '' });
+  renderGrpTargets();
+}
+
+function grpRemoveTarget(i) { _grp.targets.splice(i, 1); renderGrpTargets(); }
+
+async function rollGroupAttack() {
+  const { cid, attackName, pool, mode } = _grp;
+  const resultEl = document.getElementById('group-attack-result');
+  const targets = _grp.targets
+    .filter(r => (parseInt(r.count) || 0) > 0)
+    .map(r => ({
+      target_id: r.target_id, count: parseInt(r.count),
+      ac_override: (r.ac === '' || r.ac == null) ? undefined : parseInt(r.ac),
+    }));
+  if (!targets.length) { resultEl.innerHTML = `<span class="error-msg">Assign at least one attacker.</span>`; return; }
+  const assigned = targets.reduce((s, t) => s + t.count, 0);
+  if (assigned > pool) { resultEl.innerHTML = `<span class="error-msg">Assigned ${assigned} but the pool is only ${pool}.</span>`; return; }
+
+  const data = await fetch(`/api/group/${cid}/attack`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ attack_name: attackName, mode: mode || 'batch', targets })
+  }).then(r => r.json());
+  if (!data.ok) { resultEl.innerHTML = `<span class="error-msg">${escHtml(data.error)}</span>`; return; }
+
+  const res = data.result;
+  _segments = res.segments.map(s => {
+    const seg = { target_id: s.target_id, target_name: s.target_name, count: s.count,
+                  mode: s.mode, toHit: s.to_hit, ac: s.target_ac, _applied: false };
+    if (s.mode === 'batch') {
+      seg.attacks = s.batch.attacks.map(a => ({ nat: a.d20, total: a.total, crit: a.crit, damage: a.damage }));
+      recomputeSegmentInto(seg, s.target_ac);
+    } else if (s.mode === 'mob') {
+      seg.mob = s.mob;
+    } else {
+      seg.average = s.average;
+    }
+    return seg;
+  });
+  renderAllSegments(res);
+  addDiceFeedRaw(`Group ${attackName}: ${_segments.map(s => `${s.count}→${s.target_name}`).join(', ')}`);
+}
+
+function recomputeSegmentInto(seg, ac) {
+  ac = parseInt(ac);
+  let hits = 0, crits = 0, total = 0;
+  seg.attacks.forEach(a => {
+    const hit = a.nat === 20 ? true : (a.nat === 1 ? false : a.total >= ac);
+    a._hit = hit;
+    if (hit) { hits++; total += a.damage; if (a.crit) crits++; }
+  });
+  seg.ac = ac; seg.hits = hits; seg.crits = crits; seg.total = total;
+}
+
+function recountSegment(i, ac) {
+  if (isNaN(parseInt(ac))) return;
+  recomputeSegmentInto(_segments[i], ac);
+  document.getElementById('seg-result-' + i).innerHTML = renderSegmentResult(i);
+}
+
+function segmentApplyAmount(s) {
+  if (s.mode === 'batch') return s.total;
+  if (s.mode === 'mob') return s.mob.damage ? s.mob.damage.grand_total : 0;
+  return Math.round(s.average.total);
+}
+
+function renderSegmentResult(i) {
+  const s = _segments[i];
+  const amt = segmentApplyAmount(s);
+  const applyBtn = s._applied
+    ? `<span class="seg-applied">✓ applied ${amt} to ${escHtml(s.target_name)}</span>`
+    : `<button class="btn btn-danger btn-sm" onclick="applySegment(${i})">Apply ${amt} to ${escHtml(s.target_name)}</button>`;
+  const head = `<div class="seg-head"><strong>${escHtml(s.target_name)}</strong> — ${s.count} attacker${s.count===1?'':'s'}</div>`;
+
+  if (s.mode === 'batch') {
+    const chips = s.attacks.map(a => {
+      const cls = a._hit ? (a.crit ? 'roll-crit' : 'roll-hit') : 'roll-miss';
+      const mark = a.nat === 20 ? ' nat20' : (a.nat === 1 ? ' nat1' : '');
+      const sign = s.toHit >= 0 ? '+' : '';
+      return `<span class="roll-chip ${cls}${mark}" title="d20 ${a.nat} ${sign}${s.toHit} = ${a.total}${a._hit ? ' → ' + a.damage + ' dmg' : ' → miss'}">${a.total}${a._hit ? ` <b>${a.damage}</b>` : ''}</span>`;
+    }).join('');
+    return `<div class="attack-result-block result-hit seg-block">
+      ${head}
+      <div class="batch-acrow">Target AC <input type="number" id="seg-ac-${i}" value="${s.ac}" style="width:54px" onchange="recountSegment(${i}, this.value)">
+        <button class="btn btn-ghost btn-xs" onclick="recountSegment(${i}, document.getElementById('seg-ac-${i}').value)">Recount</button>
+        <span class="muted">+5 for Shield</span></div>
+      <div class="result-label">${s.hits} hit / ${s.crits} crit${s.crits===1?'':'s'} of ${s.count} · <strong>${s.total} dmg</strong>${s.crits>0?' <span class="crit-note">(crits doubled)</span>':''}</div>
+      <div class="roll-chips">${chips}</div>
+      ${applyBtn}
+    </div>`;
+  }
+  if (s.mode === 'mob') {
+    return `<div class="attack-result-block result-hit seg-block">
+      ${head}
+      <div class="result-label">Mob: needs ${s.mob.required_roll}+, ${s.mob.per_hit}/hit → <strong>${s.mob.hits} hits</strong>${amt?` · ${amt} dmg`:''}</div>
+      ${s.mob.damage ? renderDamageResult(s.mob.damage) : ''}
+      ${applyBtn}
+    </div>`;
+  }
+  return `<div class="attack-result-block result-hit seg-block">
+    ${head}
+    <div class="result-label">${s.average.hits} × ${s.average.avg_per_hit.toFixed(1)} avg = <strong>${amt}</strong></div>
+    ${applyBtn}
+  </div>`;
+}
+
+function renderAllSegments(res) {
+  const blocks = _segments.map((s, i) => `<div id="seg-result-${i}">${renderSegmentResult(i)}</div>`).join('');
+  const held = res.pool - res.assigned;
+  const note = held > 0 ? `<div class="muted">${held} attacker${held===1?'':'s'} held back.</div>` : '';
+  const applyAll = _segments.length > 1
+    ? `<button class="btn btn-danger" style="margin-top:8px" onclick="applyAllSegments()">Apply All</button>` : '';
+  document.getElementById('group-attack-result').innerHTML =
+    `<div class="seg-summary">Assigned ${res.assigned}/${res.pool}</div>${note}${blocks}${applyAll}`;
+}
+
+async function applyDamageToTarget(cid, targetId, amount, attackName, meta) {
+  if (!amount || amount <= 0) return;
   const c = ENC.combatants[cid];
   const tgt = ENC.combatants[targetId];
   const source = c?.name || 'DM';
   if (tgt?.is_group) {
-    await api(`/api/group/${targetId}/allocate`, 'POST', {
-      mode: 'frontload', amount, damage_type: dtype, attack_name: attackName, source
-    });
+    // Group target: damage cascades across members (per-member events); no volley summary.
+    await api(`/api/group/${targetId}/allocate`, 'POST', { mode: 'frontload', amount, attack_name: attackName, source });
   } else {
-    await api(`/api/combatant/${targetId}/damage`, 'POST', {
-      amount, damage_type: dtype, attack_name: attackName, source
-    });
+    // Single target: one damage event carrying the volley's hit/crit/attacker counts for the report.
+    await api(`/api/combatant/${targetId}/damage`, 'POST', { amount, attack_name: attackName, source, ...(meta || {}) });
+  }
+}
+
+// Volley summary (hits / crits / attackers) for the battle report, per mode.
+function segmentVolleyMeta(s) {
+  if (s.mode === 'batch') return { hits: s.hits, crits: s.crits, attacks: s.count };
+  if (s.mode === 'mob') return { hits: s.mob.hits, crits: 0, attacks: s.count };
+  return { hits: s.average.hits, crits: 0, attacks: s.count };  // average
+}
+
+async function applySegment(i) {
+  const s = _segments[i];
+  if (s._applied) return;
+  await applyDamageToTarget(_grp.cid, s.target_id, segmentApplyAmount(s), _grp.attackName, segmentVolleyMeta(s));
+  s._applied = true;
+  const el = document.getElementById('seg-result-' + i);
+  if (el) el.innerHTML = renderSegmentResult(i);
+}
+
+async function applyAllSegments() {
+  for (let i = 0; i < _segments.length; i++) {
+    if (!_segments[i]._applied) await applySegment(i);
   }
   closeGroupAttackModal();
 }
@@ -1219,7 +1386,7 @@ function aoeComputeDmg(c, baseRoll, saved, onSave, damageType) {
 }
 
 function openAoeModal(casterId, casterName) {
-  _aoe = { casterId, casterName, baseRoll: null, saves: {}, onSave: 'half', resOverride: {}, groupMode: {}, saveAdv: {} };
+  _aoe = { casterId, casterName, baseRoll: null, saves: {}, saveRolls: {}, onSave: 'half', resOverride: {}, groupMode: {}, saveAdv: {} };
   document.getElementById('aoe-caster-name').textContent = casterName;
 
   const targets = Object.values(ENC.combatants).filter(t =>
@@ -1385,6 +1552,7 @@ function aoeRollSave(cid) {
   const vs = dc ? ` vs DC${dc} → ${saved ? 'SAVED' : 'FAILED'}` : '';
   const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
   document.getElementById('aoe-saveroll-'+cid).textContent = `${rollDisp}${modStr}=${total}${vs}`;
+  _aoe.saveRolls[cid] = total;
   if (saved !== null) {
     _aoe.saves[cid] = saved;
     aoeUpdateRow(cid);
@@ -1527,6 +1695,7 @@ async function aoeApplyAll() {
     targets.push({
       combatant_id: cid,
       saved: noSave ? false : (_aoe.saves[cid] === true),
+      save_roll: noSave ? null : (_aoe.saveRolls[cid] ?? null),
       res_override: _aoe.resOverride[cid] ?? null,
       group_mode: _aoe.groupMode[cid] || 'split',
     });

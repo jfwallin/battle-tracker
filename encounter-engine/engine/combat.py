@@ -196,7 +196,45 @@ def _make_event(encounter: Encounter, **kwargs) -> LogEvent:
         attack_name=kwargs.get("attack_name", ""),
         notes=kwargs.get("notes", ""),
         ts=datetime.now(timezone.utc).isoformat(),
+        outcome=kwargs.get("outcome", ""),
+        roll=kwargs.get("roll"),
+        hits=kwargs.get("hits"),
+        crits=kwargs.get("crits", 0),
+        attacks=kwargs.get("attacks"),
     )
+
+
+def log_event(
+    encounter: Encounter,
+    event_type: str,
+    target_id: str,
+    *,
+    source: str = "DM",
+    target: Optional[str] = None,
+    attack_name: str = "",
+    outcome: str = "",
+    roll: Optional[int] = None,
+    damage_type: str = "",
+    notes: str = "",
+) -> LogEvent:
+    """Append a non-HP narrative event (e.g. a miss or a save) for the battle report.
+    amount stays 0 so HP derivation is unaffected."""
+    tgt = encounter.combatants.get(target_id)
+    event = _make_event(
+        encounter,
+        source=source,
+        target=target if target is not None else (tgt.name if tgt else target_id),
+        target_id=target_id,
+        event_type=event_type,
+        amount=0,
+        damage_type=damage_type,
+        attack_name=attack_name,
+        outcome=outcome,
+        roll=roll,
+        notes=notes,
+    )
+    encounter.log.append(event)
+    return event
 
 
 def apply_damage(
@@ -207,8 +245,16 @@ def apply_damage(
     attack_name: str = "",
     source: str = "DM",
     member_id: Optional[str] = None,
+    outcome: str = "",
+    roll: Optional[int] = None,
+    hits: Optional[int] = None,
+    crits: int = 0,
+    attacks: Optional[int] = None,
 ) -> LogEvent:
-    """Apply damage to a combatant (or group member). Temp HP depletes first."""
+    """Apply damage to a combatant (or group member). Temp HP depletes first.
+
+    hits/crits/attacks summarize a group volley (so the battle report can show "5 hit of 8"
+    instead of a single lumped damage event); leave them None for ordinary single hits."""
     target = encounter.combatants[target_id]
 
     # Handle temp HP (only for the whole combatant, not per-member)
@@ -228,6 +274,11 @@ def apply_damage(
                 damage_type=damage_type,
                 attack_name=attack_name,
                 notes=f"Fully absorbed by temp HP",
+                outcome=outcome,
+                roll=roll,
+                hits=hits,
+                crits=crits,
+                attacks=attacks,
             )
             encounter.log.append(event)
             return event
@@ -248,6 +299,11 @@ def apply_damage(
         amount=amount,
         damage_type=damage_type,
         attack_name=attack_name,
+        outcome=outcome,
+        roll=roll,
+        hits=hits,
+        crits=crits,
+        attacks=attacks,
     )
     encounter.log.append(event)
     return event

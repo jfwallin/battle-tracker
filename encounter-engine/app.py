@@ -18,15 +18,16 @@ from engine.battle_library import (
     list_sources, load_battle, save_battle,
 )
 from engine.game_data import (
-    apply_party_profile, delete_party_profile, get_party_profile,
-    list_party_profiles, save_party_profile,
+    apply_party_profile, delete_party_profile, delete_recurring_npc, delete_variant,
+    get_party_profile, get_recurring_npc, get_variant, list_party_profiles,
+    list_recurring_npcs, list_variants, save_party_profile, save_recurring_npc, save_variant,
 )
 from engine.combat import (
     add_condition, allocate_damage_each, allocate_damage_even, allocate_damage_focused,
     allocate_damage_frontload, allocate_heal_each, allocate_heal_even, apply_damage,
     apply_heal, apply_temp_hp, check_resistance, consume_limited_use, current_combatant,
     current_hp, damage_received, delete_log_event, derive_status, group_attack_pool,
-    healing_received, next_round, next_turn, prev_turn, remove_condition,
+    healing_received, log_event, next_round, next_turn, prev_turn, remove_condition,
     restore_limited_use, roll_initiative, set_initiative, sort_initiative,
     undo_last,
 )
@@ -236,10 +237,11 @@ def api_load_battle(battle_id):
     # party_profile: a profile id, "" (none), or "__default__"/absent (use the battle's default)
     body = request.get_json(silent=True) or {}
     profile_id = body.get("party_profile", "__default__")
+    gd = disc["files"]["game_data"]
+    gd_path = gd["path"] if gd["found"] else None
     try:
-        enc = load_battle(lib["path"], tracker["path"], battle_id)
+        enc = load_battle(lib["path"], tracker["path"], battle_id, game_data_path=gd_path)
 
-        gd = disc["files"]["game_data"]
         if profile_id == "__default__":
             try:
                 profile_id = get_battle_definition(lib["path"], battle_id).get("default_party_profile") or ""
@@ -399,6 +401,116 @@ def api_party_profile_delete(profile_id):
         return jsonify({"error": "Game_Data.xlsx is open in Excel — close it and retry."}), 423
 
 
+# ── Variants (Stage 3) ─────────────────────────────────────────────────────────
+
+@app.route("/api/variants")
+def api_variants():
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    gd = disc["files"]["game_data"]
+    if not gd["found"]:
+        return jsonify({"ok": True, "variants": []})
+    try:
+        return jsonify({"ok": True, "variants": list_variants(gd["path"])})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/variants/<variant_id>")
+def api_variant_get(variant_id):
+    disc = _current_discovery()
+    if disc is None or not disc["files"]["game_data"]["found"]:
+        return jsonify({"error": "No Game Data in this workspace"}), 400
+    try:
+        return jsonify({"ok": True, "variant": get_variant(disc["files"]["game_data"]["path"], variant_id)})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.route("/api/variants/save", methods=["POST"])
+def api_variant_save():
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    gd_path = disc["files"]["game_data"]["path"] or os.path.join(disc["dir"], "Game_Data.xlsx")
+    try:
+        return jsonify({"ok": True, "saved": save_variant(gd_path, request.get_json(force=True))})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
+    except PermissionError:
+        return jsonify({"error": "Game_Data.xlsx is open in Excel — close it and retry."}), 423
+
+
+@app.route("/api/variants/<variant_id>", methods=["DELETE"])
+def api_variant_delete(variant_id):
+    disc = _current_discovery()
+    if disc is None or not disc["files"]["game_data"]["found"]:
+        return jsonify({"error": "No Game Data in this workspace"}), 400
+    try:
+        delete_variant(disc["files"]["game_data"]["path"], variant_id)
+        return jsonify({"ok": True})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except PermissionError:
+        return jsonify({"error": "Game_Data.xlsx is open in Excel — close it and retry."}), 423
+
+
+# ── Recurring NPCs (Stage 3) ───────────────────────────────────────────────────
+
+@app.route("/api/recurring-npcs")
+def api_recurring_npcs():
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    gd = disc["files"]["game_data"]
+    if not gd["found"]:
+        return jsonify({"ok": True, "npcs": []})
+    try:
+        return jsonify({"ok": True, "npcs": list_recurring_npcs(gd["path"])})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/recurring-npcs/<npc_id>")
+def api_recurring_npc_get(npc_id):
+    disc = _current_discovery()
+    if disc is None or not disc["files"]["game_data"]["found"]:
+        return jsonify({"error": "No Game Data in this workspace"}), 400
+    try:
+        return jsonify({"ok": True, "npc": get_recurring_npc(disc["files"]["game_data"]["path"], npc_id)})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.route("/api/recurring-npcs/save", methods=["POST"])
+def api_recurring_npc_save():
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    gd_path = disc["files"]["game_data"]["path"] or os.path.join(disc["dir"], "Game_Data.xlsx")
+    try:
+        return jsonify({"ok": True, "saved": save_recurring_npc(gd_path, request.get_json(force=True))})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
+    except PermissionError:
+        return jsonify({"error": "Game_Data.xlsx is open in Excel — close it and retry."}), 423
+
+
+@app.route("/api/recurring-npcs/<npc_id>", methods=["DELETE"])
+def api_recurring_npc_delete(npc_id):
+    disc = _current_discovery()
+    if disc is None or not disc["files"]["game_data"]["found"]:
+        return jsonify({"error": "No Game Data in this workspace"}), 400
+    try:
+        delete_recurring_npc(disc["files"]["game_data"]["path"], npc_id)
+        return jsonify({"ok": True})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except PermissionError:
+        return jsonify({"error": "Game_Data.xlsx is open in Excel — close it and retry."}), 423
+
+
 # ── Initiative ────────────────────────────────────────────────────────────────
 
 @app.route("/api/initiative/roll", methods=["POST"])
@@ -463,6 +575,11 @@ def api_damage(cid):
         attack_name=data.get("attack_name", ""),
         source=data.get("source", "DM"),
         member_id=data.get("member_id"),
+        outcome=data.get("outcome", ""),
+        roll=data.get("roll"),
+        hits=data.get("hits"),
+        crits=data.get("crits", 0),
+        attacks=data.get("attacks"),
     )
 
 
@@ -667,6 +784,23 @@ def api_apply_attack():
         attack_name=data.get("attack_name", ""),
         source=data.get("source", ""),
         member_id=data.get("member_id"),
+        outcome=data.get("outcome", ""),
+        roll=data.get("roll"),
+    )
+
+
+@app.route("/api/attack/log-miss", methods=["POST"])
+@require_encounter
+@mutate
+def api_log_miss():
+    """Record a missed attack (no HP change) so it appears in the battle report."""
+    data = request.get_json(force=True)
+    log_event(
+        _encounter, "miss", data["target_id"],
+        source=data.get("source", "DM"),
+        attack_name=data.get("attack_name", ""),
+        roll=data.get("roll"),
+        outcome="miss",
     )
 
 
@@ -698,62 +832,98 @@ def api_allocate(cid):
 
 # ── Group batch/mob attacks ───────────────────────────────────────────────────
 
+def _segment_result(atk, count, effective_ac, mode, override=None, hits=None):
+    """Roll one segment of a group attack (a slice of the pool aimed at one target).
+
+    batch → a unique d20 per attacker + each attacker's pre-rolled (crit-aware) damage, so the
+    DM can recount vs a changed AC. mob/average are aggregate (no individual rolls).
+    """
+    seg = {"count": count, "mode": mode, "to_hit": atk.to_hit, "target_ac": effective_ac}
+    if mode == "batch":
+        batch = roll_batch(count, atk.to_hit, effective_ac)
+        for a in batch["attacks"]:
+            a["damage"] = roll_damage(atk.damage_dice, crit=a["crit"])["grand_total"]
+        batch["damage_total"] = sum(a["damage"] for a in batch["attacks"] if a["hit"])
+        seg["batch"] = batch
+    elif mode == "mob":
+        mob = mob_hits(count, atk.to_hit, effective_ac, override=override)
+        if mob["hits"] > 0:
+            mob["damage"] = roll_damage(atk.damage_dice * mob["hits"])
+        seg["mob"] = mob
+    elif mode == "average":
+        avg = avg_damage(atk.damage_dice)
+        h = hits if hits is not None else count
+        seg["average"] = {"avg_per_hit": avg, "hits": h, "total": avg * h}
+    return seg
+
+
 @app.route("/api/group/<cid>/attack", methods=["POST"])
 @require_encounter
 def api_group_attack(cid):
     data = request.get_json(force=True)
     mode = data.get("mode", "batch")
-    target_id = data["target_id"]
     attack_name = data["attack_name"]
 
     c = _encounter.combatants.get(cid)
-    target = _encounter.combatants.get(target_id)
-    if not c or not target:
+    if not c:
         return jsonify({"error": "Unknown combatant"}), 400
-
     atk = next((a for a in c.attacks if a.name == attack_name), None)
     if not atk:
         return jsonify({"error": f"Attack '{attack_name}' not found"}), 400
 
     pool = group_attack_pool(c, _encounter.log)
-    result = {"mode": mode, "pool": pool, "attack_name": attack_name}
 
-    # Honor a DM-supplied AC (modal pre-fills/edits this; required for PC targets with no stat AC).
-    ac_override = data.get("ac_override")
-    effective_ac = ac_override if ac_override is not None else target.ac
+    # The pool is partitioned across one or more targets. Legacy single-target requests
+    # (just target_id) become one full-pool segment.
+    targets = data.get("targets")
+    legacy_single = not targets
+    if legacy_single:
+        targets = [{"target_id": data.get("target_id"), "count": pool,
+                    "ac_override": data.get("ac_override"),
+                    "override": data.get("override"), "hits": data.get("hits")}]
 
-    if mode == "batch":
-        if atk.to_hit is None or effective_ac is None:
-            return jsonify({"error": "Batch requires to-hit and a target AC"}), 400
-        batch = roll_batch(pool, atk.to_hit, effective_ac)
-        # Roll damage per hitting attack so each crit doubles its OWN dice (not the whole pool).
-        if batch["hits"] > 0:
-            clauses = []
-            grand_total = 0
-            for a in batch["attacks"]:
-                if not a["hit"]:
-                    continue
-                d = roll_damage(atk.damage_dice, crit=a["crit"])
-                grand_total += d["grand_total"]
-                clauses.extend(d["clauses"])
-            batch["damage"] = {"clauses": clauses, "grand_total": grand_total, "crit": batch["crits"] > 0}
-        result["batch"] = batch
+    # Validate each target + that the assigned attackers don't exceed the pool.
+    norm, assigned = [], 0
+    for t in targets:
+        tgt = _encounter.combatants.get(t.get("target_id"))
+        if not tgt:
+            return jsonify({"error": f"Unknown target: {t.get('target_id')}"}), 400
+        try:
+            cnt = int(t.get("count", 0))
+        except (TypeError, ValueError):
+            cnt = 0
+        if cnt < 1:
+            return jsonify({"error": "Each target needs at least 1 attacker."}), 400
+        assigned += cnt
+        norm.append((t, tgt, cnt))
+    if assigned > pool:
+        return jsonify({"error": f"Assigned {assigned} attackers but the pool is only {pool}."}), 400
+    if mode in ("batch", "mob") and atk.to_hit is None:
+        return jsonify({"error": f"{mode.title()} requires an attack with a to-hit bonus."}), 400
 
-    elif mode == "mob":
-        if atk.to_hit is None or effective_ac is None:
-            return jsonify({"error": "Mob requires to-hit and a target AC"}), 400
-        override = data.get("override")
-        mob = mob_hits(pool, atk.to_hit, effective_ac, override=override)
-        # Mob is a statistical estimate (no individual d20s), so there are no crits to double.
-        if mob["hits"] > 0:
-            dmg = roll_damage(atk.damage_dice * mob["hits"])
-            mob["damage"] = dmg
-        result["mob"] = mob
+    segments = []
+    for t, tgt, cnt in norm:
+        ac_override = t.get("ac_override")
+        effective_ac = ac_override if ac_override is not None else tgt.ac
+        if mode in ("batch", "mob") and effective_ac is None:
+            return jsonify({"error": f"{tgt.name}: a target AC is required for {mode} mode."}), 400
+        seg = _segment_result(atk, cnt, effective_ac, mode,
+                              override=t.get("override"), hits=t.get("hits"))
+        seg["target_id"] = tgt.id
+        seg["target_name"] = tgt.name
+        segments.append(seg)
 
-    elif mode == "average":
-        avg = avg_damage(atk.damage_dice)
-        hits = data.get("hits", pool)
-        result["average"] = {"avg_per_hit": avg, "hits": hits, "total": avg * hits}
+    result = {"mode": mode, "pool": pool, "assigned": assigned,
+              "attack_name": attack_name, "segments": segments}
+
+    # Back-compat: mirror the single segment into the old top-level keys.
+    if legacy_single and segments:
+        s = segments[0]
+        result["to_hit"] = s["to_hit"]
+        result["target_ac"] = s["target_ac"]
+        for k in ("batch", "mob", "average"):
+            if k in s:
+                result[k] = s[k]
 
     return jsonify({"ok": True, "result": result})
 
@@ -784,41 +954,41 @@ def api_spell_roll_damage():
 def api_spell_aoe():
     """Apply AoE spell damage to multiple targets, respecting resistance/immunity and saves."""
     data = request.get_json(force=True)
-    print(f"[AoE] received: {data}", flush=True)
     source = data.get("source", "DM")
     spell_name = data.get("spell_name", "Spell")
     damage_roll = int(data["damage_roll"])
     damage_type = data.get("damage_type", "")
-    on_save = data.get("on_save", "half")   # "half" or "none"
+    on_save = data.get("on_save", "half")   # "half", "none", or "nosave"
     targets = data.get("targets", [])
-    print(f"[AoE] dmg={damage_roll} type={damage_type} on_save={on_save} targets={targets}", flush=True)
 
     for t in targets:
         cid = t["combatant_id"]
         saved = bool(t.get("saved", False))
+        save_roll = t.get("save_roll")
         combatant = _encounter.combatants.get(cid)
         if not combatant:
             continue
+
+        outcome = "saved" if saved else "failed"
 
         # DM override wins; otherwise auto-detect from combatant strings
         res_override = t.get("res_override")
         res = res_override if res_override in ("immune", "resistant", "normal") else check_resistance(combatant, damage_type)
         if res == "immune":
-            continue  # no damage, skip entirely
+            log_event(_encounter, "save", cid, source=source, attack_name=spell_name,
+                      outcome="immune", roll=save_roll, damage_type=damage_type)
+            continue
 
-        # Apply save result
-        if saved:
-            base = damage_roll // 2 if on_save == "half" else 0
-        else:
-            base = damage_roll
-
-        # Apply resistance
+        # Apply save result, then resistance
+        base = (damage_roll // 2 if on_save == "half" else 0) if saved else damage_roll
         final_dmg = base // 2 if res == "resistant" else base
 
         if final_dmg <= 0:
+            # No damage (fully saved / on_save none) — still record the save for the report.
+            log_event(_encounter, "save", cid, source=source, attack_name=spell_name,
+                      outcome=outcome, roll=save_roll, damage_type=damage_type)
             continue
 
-        print(f"[AoE] applying {final_dmg} to {combatant.name} (res={res}, saved={saved})", flush=True)
         if combatant.is_group:
             group_mode = t.get("group_mode", "split")
             if group_mode == "each":
@@ -826,7 +996,8 @@ def api_spell_aoe():
             else:
                 allocate_damage_even(_encounter, cid, final_dmg, damage_type, spell_name, source)
         else:
-            apply_damage(_encounter, cid, final_dmg, damage_type, spell_name, source)
+            apply_damage(_encounter, cid, final_dmg, damage_type, spell_name, source,
+                         outcome=outcome, roll=save_roll)
 
 
 @app.route("/api/spell/mass-heal", methods=["POST"])
@@ -944,6 +1115,24 @@ def api_export_excel():
         from engine.excel_exporter import export_encounter
         export_encounter(_encounter, out_path)
         return jsonify({"ok": True, "path": out_path})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/export-report", methods=["POST"])
+@require_encounter
+def api_export_report():
+    """Write a battle report (Scorecard + Detailed Log) workbook. player_safe omits DM notes."""
+    data = request.get_json(force=True)
+    out_path = data.get("path", "")
+    if not out_path:
+        return jsonify({"error": "path required"}), 400
+    try:
+        from engine.battle_report import export_report
+        export_report(_encounter, out_path, player_safe=bool(data.get("player_safe", False)))
+        return jsonify({"ok": True, "path": out_path})
+    except PermissionError:
+        return jsonify({"error": "That file is open in Excel — close it and retry."}), 423
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

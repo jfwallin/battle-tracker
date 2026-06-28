@@ -1,143 +1,25 @@
 {
-  "round": 2,
-  "turn_index": 4,
+  "round": 1,
+  "turn_index": 1,
   "order": [
-    "4e2d36b5",
-    "2d0acfcd",
-    "32ec9a9b",
-    "23f6bd98",
-    "10c43142",
-    "19ccb314",
-    "fc097ae1",
-    "cb1f24a7"
+    "d532f12d",
+    "bbe63d0a",
+    "9c6b377f",
+    "e48ede78",
+    "5b304180",
+    "388126f2",
+    "2cd1b0f1"
   ],
   "combatants": {
-    "cb1f24a7": {
-      "id": "cb1f24a7",
-      "name": "Air Anchor Caster",
+    "d532f12d": {
+      "id": "d532f12d",
+      "name": "Hobgoblin (billy)",
       "combatant_type": "NPC",
-      "source_tab": "Air Anchor Caster",
-      "initiative": 1,
-      "initiative_mod": 0,
-      "ac": 12,
-      "max_hp": 18,
-      "temp_hp": 0,
-      "conditions": [],
-      "condition_notes": {},
-      "concentration": null,
-      "status_override": null,
-      "attacks": [
-        {
-          "name": "Name",
-          "attack_type": "Type",
-          "to_hit": null,
-          "reach": "Reach / Range",
-          "damage_dice": [],
-          "save_dc": null,
-          "save_ability": "",
-          "effect": "Effect"
-        }
-      ],
-      "limited_use": [],
-      "is_group": false,
-      "members": [],
-      "initiative_mode": "Individual",
-      "attacks_per_round": 1,
-      "reaction_used": false,
-      "notes": "",
-      "speed": "30 ft.",
-      "size_type_alignment": "Medium humanoid (cultist), chaotic neutral",
-      "proficiency_bonus": 2,
-      "ability_scores": {
-        "STR": 10,
-        "DEX": 10,
-        "CON": 12,
-        "INT": 12,
-        "WIS": 14,
-        "CHA": 14
-      },
-      "ability_mods": {
-        "STR": 0,
-        "DEX": 0,
-        "CON": 1,
-        "INT": 1,
-        "WIS": 2,
-        "CHA": 2
-      },
-      "save_bonuses": {
-        "STR": 0,
-        "DEX": 0,
-        "CON": 1,
-        "INT": 1,
-        "WIS": 4,
-        "CHA": 4
-      },
-      "resistances": "lightning, thunder (while portal Stage 2+)",
-      "immunities": "",
-      "condition_immunities": "",
-      "senses": "passive Perception 10",
-      "traits": [
-        {
-          "name": "Name",
-          "desc": "Description"
-        },
-        {
-          "name": "Elemental Ward",
-          "desc": "While portal Stage 2+: advantage on elemental saves; resistance to all elemental damage."
-        },
-        {
-          "name": "Ritual Trance",
-          "desc": "Does not attack, cast spells, or make opportunity attacks. Disadvantage on Perception."
-        },
-        {
-          "name": "Bound to Air Focus",
-          "desc": "Connection persists until caster is stopped AND focus is stolen/disabled/dispelled/destroyed."
-        },
-        {
-          "name": "Nonviolent Disruption",
-          "desc": "DC 16 Persuasion/Intimidation/Religion/Arcana; DC 15 Athletics; Dispel Magic DC 16; Silence/stun/paralysis/incapacitation."
-        },
-        {
-          "name": "Elemental Focus",
-          "desc": "AC 15, HP 20, Damage Threshold 5."
-        }
-      ],
-      "actions": [
-        {
-          "name": "Name",
-          "desc": "Description"
-        },
-        {
-          "name": "Continue Ritual",
-          "desc": "Maintains yellow/air connection to the elemental portal."
-        },
-        {
-          "name": "Cry Out",
-          "desc": "One nearby defender or elemental moves 10 ft. toward this anchor as a reaction."
-        }
-      ],
-      "bonus_actions": [],
-      "reactions": [],
-      "bloodied_effects": [
-        {
-          "name": "Name",
-          "desc": "Description"
-        },
-        {
-          "name": "Violent Backlash \u2014 if killed or focus destroyed",
-          "desc": "1-2: Wind Detonation \u2014 20-ft radius, DC 16 STR, 8d6 force; pushed 20 ft. and prone on fail. 3-4: Air Birth \u2014 air elemental appears. 5-6: Air Rift \u2014 wind wall; ranged attacks through it at disadvantage; DC 16 STR to cross or pushed 15 ft."
-        }
-      ]
-    },
-    "19ccb314": {
-      "id": "19ccb314",
-      "name": "War Mage",
-      "combatant_type": "NPC",
-      "source_tab": "War Mage",
-      "initiative": 4,
+      "source_tab": "Hobgoblin",
+      "initiative": 20,
       "initiative_mod": 2,
-      "ac": 13,
-      "max_hp": 35,
+      "ac": 21,
+      "max_hp": 22,
       "temp_hp": 0,
       "conditions": [],
       "condition_notes": {},
@@ -155,218 +37,147 @@
           "effect": "Effect"
         },
         {
-          "name": "Fire Bolt",
-          "attack_type": "Ranged Spell",
-          "to_hit": 7,
-          "reach": "120 ft.",
-          "damage_dice": [
-            {
-              "n": 2,
-              "die": 10,
-              "bonus": 0,
-              "damage_type": "fire"
-            }
-          ],
-          "save_dc": null,
-          "save_ability": "",
-          "effect": "Cantrip"
-        },
-        {
-          "name": "Ray of Frost",
-          "attack_type": "Ranged Spell",
-          "to_hit": 7,
-          "reach": "60 ft.",
+          "name": "Longsword",
+          "attack_type": "Melee Weapon",
+          "to_hit": 11,
+          "reach": "5 ft.",
           "damage_dice": [
             {
               "n": 1,
               "die": 8,
-              "bonus": 0,
-              "damage_type": "cold"
+              "bonus": 1,
+              "damage_type": "slashing"
             }
           ],
           "save_dc": null,
           "save_ability": "",
-          "effect": "Cantrip \u2014 slows 10 ft."
-        },
-        {
-          "name": "Magic Missile",
-          "attack_type": "Ranged Spell",
-          "to_hit": null,
-          "reach": "60 ft.",
-          "damage_dice": [
-            {
-              "n": 3,
-              "die": 4,
-              "bonus": 3,
-              "damage_type": "force"
-            }
-          ],
-          "save_dc": null,
-          "save_ability": "",
-          "effect": "1st level \u2014 auto-hit three darts"
-        },
-        {
-          "name": "Scorching Ray",
-          "attack_type": "Ranged Spell",
-          "to_hit": 7,
-          "reach": "120 ft.",
-          "damage_dice": [
-            {
-              "n": 2,
-              "die": 6,
-              "bonus": 0,
-              "damage_type": "fire"
-            }
-          ],
-          "save_dc": null,
-          "save_ability": "",
-          "effect": "2nd level \u2014 three rays"
-        },
-        {
-          "name": "Fireball",
-          "attack_type": "Ranged Spell",
-          "to_hit": null,
-          "reach": "150 ft.",
-          "damage_dice": [
-            {
-              "n": 8,
-              "die": 6,
-              "bonus": 0,
-              "damage_type": "fire"
-            }
-          ],
-          "save_dc": 15,
-          "save_ability": "DEX",
-          "effect": "3rd \u2014 20-ft radius; half on save"
-        },
-        {
-          "name": "Lightning Bolt",
-          "attack_type": "Ranged Spell",
-          "to_hit": null,
-          "reach": "100 ft.",
-          "damage_dice": [
-            {
-              "n": 8,
-              "die": 6,
-              "bonus": 0,
-              "damage_type": "lightning"
-            }
-          ],
-          "save_dc": 15,
-          "save_ability": "DEX",
-          "effect": "3rd \u2014 100-ft line; half on save"
-        },
-        {
-          "name": "Force Burst",
-          "attack_type": "Ranged Spell",
-          "to_hit": 7,
-          "reach": "60 ft.",
-          "damage_dice": [
-            {
-              "n": 4,
-              "die": 6,
-              "bonus": 0,
-              "damage_type": "force"
-            }
-          ],
-          "save_dc": 15,
-          "save_ability": "CON",
-          "effect": "Area force damage"
+          "effect": ""
         }
       ],
       "limited_use": [],
-      "is_group": false,
-      "members": [],
+      "is_group": true,
+      "members": [
+        {
+          "id": "91ba9aba",
+          "name": "Hobgoblin 1",
+          "max_hp": 22,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "f3c019f5",
+          "name": "Hobgoblin 2",
+          "max_hp": 22,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "3bea75ed",
+          "name": "Hobgoblin 3",
+          "max_hp": 22,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "b1a0df7f",
+          "name": "Hobgoblin 4",
+          "max_hp": 22,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "8955352d",
+          "name": "Hobgoblin 5",
+          "max_hp": 22,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "0581850f",
+          "name": "Hobgoblin 6",
+          "max_hp": 22,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "5f69bba3",
+          "name": "Hobgoblin 7",
+          "max_hp": 22,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "a2f285c1",
+          "name": "Hobgoblin 8",
+          "max_hp": 22,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        }
+      ],
       "initiative_mode": "Individual",
-      "attacks_per_round": 1,
+      "attacks_per_round": 3,
       "reaction_used": false,
       "notes": "",
       "speed": "30 ft.",
-      "size_type_alignment": "Medium humanoid (hobgoblin or elf), lawful neutral",
+      "size_type_alignment": "Medium humanoid (goblinoid), lawful evil",
       "proficiency_bonus": 2,
       "ability_scores": {
-        "STR": 10,
-        "DEX": 14,
-        "CON": 14,
-        "INT": 18,
-        "WIS": 14,
-        "CHA": 12
+        "STR": 13,
+        "DEX": 12,
+        "CON": 12,
+        "INT": 10,
+        "WIS": 10,
+        "CHA": 9
       },
       "ability_mods": {
-        "STR": 0,
-        "DEX": 2,
-        "CON": 2,
-        "INT": 4,
-        "WIS": 2,
-        "CHA": 1
+        "STR": 1,
+        "DEX": 1,
+        "CON": 1,
+        "INT": 0,
+        "WIS": 0,
+        "CHA": -1
       },
       "save_bonuses": {
-        "STR": 0,
-        "DEX": 2,
-        "CON": 4,
-        "INT": 6,
-        "WIS": 2,
-        "CHA": 1
+        "STR": 1,
+        "DEX": 1,
+        "CON": 1,
+        "INT": 0,
+        "WIS": 0,
+        "CHA": -1
       },
-      "resistances": "",
+      "resistances": "fire",
       "immunities": "",
       "condition_immunities": "",
-      "senses": "darkvision 60 ft., passive Perception 12",
+      "senses": "darkvision 60 ft., passive Perception 10",
       "traits": [
         {
           "name": "Name",
           "desc": "Description"
         },
         {
-          "name": "Controlled Casting",
-          "desc": "Advantage on concentration saves. Not disrupted by hits under 10 damage."
-        },
-        {
-          "name": "Battlefield Focus",
-          "desc": "Advantage on CON saves to maintain concentration."
-        },
-        {
-          "name": "Spellcasting \u2014 Wizard ~7-9",
-          "desc": "Spell attack +7. Save DC 15. INT-based. Slots: 1st x4, 2nd x3, 3rd x3, 4th x1-2. Cantrips: Fire Bolt, Ray of Frost, Shocking Grasp, Minor Illusion. 1st: Mage Armor (pre-cast), Shield (reaction), Magic Missile, Fog Cloud. 2nd: Mirror Image, Misty Step, Web, Scorching Ray. 3rd: Fireball, Lightning Bolt, Haste. 4th: Wall of Fire, Greater Invisibility."
-        },
-        {
-          "name": "Tactics",
-          "desc": "Stays behind front line. Pre-casts Mage Armor (AC becomes 16). Casts Haste on key melee allies. Break: retreats via Misty Step if threatened in melee. HIGH VALUE TARGET."
+          "name": "Martial Advantage",
+          "desc": "Once per turn, the hobgoblin can deal an extra 2d6 damage to a creature it hits with a weapon attack if that creature is within 5 ft. of an ally of the hobgoblin that isn't incapacitated."
         }
       ],
-      "actions": [
-        {
-          "name": "Name",
-          "desc": "Description"
-        },
-        {
-          "name": "Control Field",
-          "desc": "Web (DC 15 STR, restrained) or difficult terrain effect in 30-40 ft. area."
-        },
-        {
-          "name": "Buff Ally",
-          "desc": "Haste on one ally: doubled speed, +2 AC, adv DEX saves, extra Attack. Concentration 1 min."
-        }
-      ],
+      "actions": [],
       "bonus_actions": [],
-      "reactions": [
-        {
-          "name": "Name",
-          "desc": "Description"
-        },
-        {
-          "name": "Shield",
-          "desc": "When hit by attack or Magic Missile: +5 AC until start of next turn. Uses 1st-level slot."
-        }
-      ],
+      "reactions": [],
       "bloodied_effects": []
     },
-    "4e2d36b5": {
-      "id": "4e2d36b5",
-      "name": "red booties",
+    "bbe63d0a": {
+      "id": "bbe63d0a",
+      "name": "Hobgoblin",
       "combatant_type": "NPC",
       "source_tab": "Hobgoblin",
-      "initiative": 18,
+      "initiative": 19,
       "initiative_mod": 1,
       "ac": 18,
       "max_hp": 11,
@@ -408,7 +219,7 @@
       "is_group": true,
       "members": [
         {
-          "id": "237e4b09",
+          "id": "3cccbddd",
           "name": "Hobgoblin 1",
           "max_hp": 11,
           "conditions": [],
@@ -416,7 +227,7 @@
           "status_override": null
         },
         {
-          "id": "3fded6eb",
+          "id": "b83177b2",
           "name": "Hobgoblin 2",
           "max_hp": 11,
           "conditions": [],
@@ -424,7 +235,7 @@
           "status_override": null
         },
         {
-          "id": "25e15af5",
+          "id": "62b8c4dd",
           "name": "Hobgoblin 3",
           "max_hp": 11,
           "conditions": [],
@@ -432,7 +243,7 @@
           "status_override": null
         },
         {
-          "id": "4387f0b3",
+          "id": "4e7ae239",
           "name": "Hobgoblin 4",
           "max_hp": 11,
           "conditions": [],
@@ -440,7 +251,7 @@
           "status_override": null
         },
         {
-          "id": "1151a39c",
+          "id": "e15f5cdc",
           "name": "Hobgoblin 5",
           "max_hp": 11,
           "conditions": [],
@@ -448,7 +259,7 @@
           "status_override": null
         },
         {
-          "id": "3f8e1ecd",
+          "id": "f1ff592c",
           "name": "Hobgoblin 6",
           "max_hp": 11,
           "conditions": [],
@@ -456,7 +267,7 @@
           "status_override": null
         },
         {
-          "id": "80fb93ea",
+          "id": "a55cbbc6",
           "name": "Hobgoblin 7",
           "max_hp": 11,
           "conditions": [],
@@ -464,7 +275,7 @@
           "status_override": null
         },
         {
-          "id": "bb891b8a",
+          "id": "a3aa2600",
           "name": "Hobgoblin 8",
           "max_hp": 11,
           "conditions": [],
@@ -472,7 +283,7 @@
           "status_override": null
         }
       ],
-      "initiative_mode": "Grouped Attacks",
+      "initiative_mode": "Individual",
       "attacks_per_round": 1,
       "reaction_used": false,
       "notes": "",
@@ -522,12 +333,12 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "32ec9a9b": {
-      "id": "32ec9a9b",
+    "9c6b377f": {
+      "id": "9c6b377f",
       "name": "Rex",
       "combatant_type": "PC",
       "source_tab": null,
-      "initiative": 16,
+      "initiative": 18,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": null,
@@ -560,12 +371,12 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "2d0acfcd": {
-      "id": "2d0acfcd",
+    "388126f2": {
+      "id": "388126f2",
       "name": "Prag",
       "combatant_type": "PC",
       "source_tab": null,
-      "initiative": 17,
+      "initiative": 13,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": null,
@@ -598,12 +409,12 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "10c43142": {
-      "id": "10c43142",
+    "e48ede78": {
+      "id": "e48ede78",
       "name": "Roquist",
       "combatant_type": "PC",
       "source_tab": null,
-      "initiative": 8,
+      "initiative": 18,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": null,
@@ -636,12 +447,12 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "fc097ae1": {
-      "id": "fc097ae1",
+    "2cd1b0f1": {
+      "id": "2cd1b0f1",
       "name": "Giggles",
       "combatant_type": "PC",
       "source_tab": null,
-      "initiative": 1,
+      "initiative": 13,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": null,
@@ -674,12 +485,12 @@
       "reactions": [],
       "bloodied_effects": []
     },
-    "23f6bd98": {
-      "id": "23f6bd98",
+    "5b304180": {
+      "id": "5b304180",
       "name": "Shaddow",
       "combatant_type": "PC",
       "source_tab": null,
-      "initiative": 10,
+      "initiative": 17,
       "initiative_mod": 0,
       "ac": null,
       "max_hp": null,
@@ -715,424 +526,38 @@
   },
   "log": [
     {
-      "id": "51426457",
+      "id": "d91ba31f",
       "round": 1,
       "turn": 0,
-      "source": "red booties",
-      "target": "Giggles",
-      "target_id": "fc097ae1",
+      "source": "Hobgoblin (billy)",
+      "target": "Rex",
+      "target_id": "9c6b377f",
       "member_id": null,
       "event_type": "damage",
-      "amount": 25,
+      "amount": 98,
       "damage_type": "",
       "attack_name": "Longsword",
       "notes": "",
-      "ts": "2026-06-28T02:48:15.119630+00:00"
+      "ts": "2026-06-28T15:09:04.772998+00:00",
+      "outcome": "",
+      "roll": null
     },
     {
-      "id": "0d6599ad",
+      "id": "a4a48a1e",
       "round": 1,
       "turn": 1,
-      "source": "Prag",
-      "target": "Giggles",
-      "target_id": "fc097ae1",
-      "member_id": null,
-      "event_type": "heal",
-      "amount": 12,
-      "damage_type": "",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:48:40.843395+00:00"
-    },
-    {
-      "id": "02b53ec1",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 1",
-      "target_id": "4e2d36b5",
-      "member_id": "237e4b09",
-      "event_type": "damage",
-      "amount": 11,
-      "damage_type": "",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:49:08.238067+00:00"
-    },
-    {
-      "id": "bafa78b9",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 2",
-      "target_id": "4e2d36b5",
-      "member_id": "3fded6eb",
-      "event_type": "damage",
-      "amount": 11,
-      "damage_type": "",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:49:08.238067+00:00"
-    },
-    {
-      "id": "b42a5acc",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 3",
-      "target_id": "4e2d36b5",
-      "member_id": "25e15af5",
-      "event_type": "damage",
-      "amount": 1,
-      "damage_type": "",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:49:08.238067+00:00"
-    },
-    {
-      "id": "120dca1f",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 1",
-      "target_id": "4e2d36b5",
-      "member_id": "237e4b09",
-      "event_type": "damage",
-      "amount": 25,
-      "damage_type": "slashing",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:51:28.653088+00:00"
-    },
-    {
-      "id": "0b4f263c",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 2",
-      "target_id": "4e2d36b5",
-      "member_id": "3fded6eb",
-      "event_type": "damage",
-      "amount": 25,
-      "damage_type": "slashing",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:51:28.653088+00:00"
-    },
-    {
-      "id": "406d4793",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 3",
-      "target_id": "4e2d36b5",
-      "member_id": "25e15af5",
-      "event_type": "damage",
-      "amount": 25,
-      "damage_type": "slashing",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:51:28.653088+00:00"
-    },
-    {
-      "id": "77c93e91",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 4",
-      "target_id": "4e2d36b5",
-      "member_id": "4387f0b3",
-      "event_type": "damage",
-      "amount": 25,
-      "damage_type": "slashing",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:51:28.653088+00:00"
-    },
-    {
-      "id": "ca12bdfa",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 5",
-      "target_id": "4e2d36b5",
-      "member_id": "1151a39c",
-      "event_type": "damage",
-      "amount": 25,
-      "damage_type": "slashing",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:51:28.653088+00:00"
-    },
-    {
-      "id": "d341dbe6",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 6",
-      "target_id": "4e2d36b5",
-      "member_id": "3f8e1ecd",
-      "event_type": "damage",
-      "amount": 25,
-      "damage_type": "slashing",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:51:28.653088+00:00"
-    },
-    {
-      "id": "666c551d",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 7",
-      "target_id": "4e2d36b5",
-      "member_id": "80fb93ea",
-      "event_type": "damage",
-      "amount": 25,
-      "damage_type": "slashing",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:51:28.653088+00:00"
-    },
-    {
-      "id": "108602ea",
-      "round": 1,
-      "turn": 2,
-      "source": "Rex",
-      "target": "Hobgoblin 8",
-      "target_id": "4e2d36b5",
-      "member_id": "bb891b8a",
-      "event_type": "damage",
-      "amount": 25,
-      "damage_type": "slashing",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:51:28.653088+00:00"
-    },
-    {
-      "id": "12dcba8c",
-      "round": 1,
-      "turn": 3,
-      "source": "Shaddow",
-      "target": "Air Anchor Caster",
-      "target_id": "cb1f24a7",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 45,
-      "damage_type": "Bludgeoning",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:52:49.447411+00:00"
-    },
-    {
-      "id": "e85f323e",
-      "round": 1,
-      "turn": 4,
-      "source": "Roquist",
-      "target": "Air Anchor Caster",
-      "target_id": "cb1f24a7",
+      "source": "Hobgoblin",
+      "target": "Rex",
+      "target_id": "9c6b377f",
       "member_id": null,
       "event_type": "damage",
       "amount": 17,
       "damage_type": "",
-      "attack_name": "",
+      "attack_name": "Longsword",
       "notes": "",
-      "ts": "2026-06-28T02:53:24.077849+00:00"
-    },
-    {
-      "id": "171ea182",
-      "round": 1,
-      "turn": 5,
-      "source": "Shaddow",
-      "target": "War Mage",
-      "target_id": "19ccb314",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 34,
-      "damage_type": "",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:53:47.612238+00:00"
-    },
-    {
-      "id": "3d4a0ce9",
-      "round": 1,
-      "turn": 6,
-      "source": "Giggles",
-      "target": "War Mage",
-      "target_id": "19ccb314",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 12,
-      "damage_type": "lightning",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:54:52.957595+00:00"
-    },
-    {
-      "id": "26a5d2b8",
-      "round": 1,
-      "turn": 6,
-      "source": "Giggles",
-      "target": "Air Anchor Caster",
-      "target_id": "cb1f24a7",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 3,
-      "damage_type": "lightning",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:54:52.957595+00:00"
-    },
-    {
-      "id": "f8d6c87b",
-      "round": 1,
-      "turn": 7,
-      "source": "Air Anchor Caster",
-      "target": "Roquist",
-      "target_id": "10c43142",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 45,
-      "damage_type": "lightning",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:56:00.800815+00:00"
-    },
-    {
-      "id": "00092761",
-      "round": 1,
-      "turn": 7,
-      "source": "Air Anchor Caster",
-      "target": "Shaddow",
-      "target_id": "23f6bd98",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 45,
-      "damage_type": "lightning",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:56:00.801342+00:00"
-    },
-    {
-      "id": "e9ecbf3e",
-      "round": 1,
-      "turn": 7,
-      "source": "Air Anchor Caster",
-      "target": "Prag",
-      "target_id": "2d0acfcd",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 45,
-      "damage_type": "lightning",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:56:00.801342+00:00"
-    },
-    {
-      "id": "1750dfac",
-      "round": 1,
-      "turn": 7,
-      "source": "Air Anchor Caster",
-      "target": "Rex",
-      "target_id": "32ec9a9b",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 45,
-      "damage_type": "lightning",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:56:00.801342+00:00"
-    },
-    {
-      "id": "3bf843fc",
-      "round": 1,
-      "turn": 7,
-      "source": "Air Anchor Caster",
-      "target": "Giggles",
-      "target_id": "fc097ae1",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 45,
-      "damage_type": "lightning",
-      "attack_name": "AoE Spell",
-      "notes": "",
-      "ts": "2026-06-28T02:56:00.801342+00:00"
-    },
-    {
-      "id": "d50578e5",
-      "round": 2,
-      "turn": 1,
-      "source": "Prag",
-      "target": "Prag",
-      "target_id": "2d0acfcd",
-      "member_id": null,
-      "event_type": "heal",
-      "amount": 20,
-      "damage_type": "",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:57:11.382122+00:00"
-    },
-    {
-      "id": "fa19b999",
-      "round": 2,
-      "turn": 1,
-      "source": "Prag",
-      "target": "Roquist",
-      "target_id": "10c43142",
-      "member_id": null,
-      "event_type": "heal",
-      "amount": 20,
-      "damage_type": "",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:57:11.382122+00:00"
-    },
-    {
-      "id": "b4834007",
-      "round": 2,
-      "turn": 1,
-      "source": "Prag",
-      "target": "Rex",
-      "target_id": "32ec9a9b",
-      "member_id": null,
-      "event_type": "heal",
-      "amount": 20,
-      "damage_type": "",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:57:11.382122+00:00"
-    },
-    {
-      "id": "05b80b5a",
-      "round": 2,
-      "turn": 1,
-      "source": "Prag",
-      "target": "Giggles",
-      "target_id": "fc097ae1",
-      "member_id": null,
-      "event_type": "heal",
-      "amount": 20,
-      "damage_type": "",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T02:57:11.382122+00:00"
-    },
-    {
-      "id": "533b376f",
-      "round": 2,
-      "turn": 3,
-      "source": "Shaddow",
-      "target": "Air Anchor Caster",
-      "target_id": "cb1f24a7",
-      "member_id": null,
-      "event_type": "damage",
-      "amount": 23,
-      "damage_type": "Bludgeoning",
-      "attack_name": "",
-      "notes": "",
-      "ts": "2026-06-28T03:40:00.643786+00:00"
+      "ts": "2026-06-28T15:10:16.187964+00:00",
+      "outcome": "",
+      "roll": null
     }
   ],
   "source_path": "C:\\Users\\jfwal\\OneDrive\\dnd - elemental crown\\battle tracker\\combat tracker.xlsx",

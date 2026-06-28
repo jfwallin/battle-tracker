@@ -107,8 +107,6 @@ def _count_and_validate(rows: list[dict], battle: dict, tracker_tabs: Optional[s
         if src and tracker_tabs is not None and src not in tracker_tabs:
             warnings.append(f"Source tab '{src}' not found in Combat Tracker.")
 
-        if row.get("variant_id"):
-            warnings.append(f"Row '{label}': Variant ID not supported yet (Stage 3); ignored.")
         if row.get("trigger"):
             warnings.append(f"Row '{label}': Trigger not supported yet (Stage 5); ignored.")
 
@@ -156,11 +154,13 @@ def list_battles(lib_path: str, tracker_path: Optional[str] = None) -> list[dict
     return battles
 
 
-def load_battle(lib_path: str, tracker_path: str, battle_id: str) -> Encounter:
+def load_battle(lib_path: str, tracker_path: str, battle_id: str,
+                game_data_path: Optional[str] = None) -> Encounter:
     """Resolve a battle definition into a self-contained live Encounter.
 
-    Creature stats are pulled from Combat Tracker.xlsx at load time and snapshotted into
-    the Encounter; later edits to source workbooks do not affect an in-progress battle.
+    Creature stats are pulled from Combat Tracker.xlsx at load time; a row's Variant ID (if any)
+    is resolved from Game_Data.xlsx and layered on. Everything is snapshotted into the Encounter,
+    so later edits to source workbooks do not affect an in-progress battle.
     Raises ValueError on hard problems (unknown battle, missing definition sheet).
     """
     wb = _open(lib_path)
@@ -183,6 +183,15 @@ def load_battle(lib_path: str, tracker_path: str, battle_id: str) -> Encounter:
     rows = read_battle_list_rows(wb[loc])
     resolve = make_combat_tracker_resolver(tracker_path)
 
+    # Reusable variants (Game_Data.xlsx), if available.
+    variants: dict = {}
+    if game_data_path:
+        try:
+            from .game_data import list_variants
+            variants = {v["id"]: v for v in list_variants(game_data_path)}
+        except Exception:
+            variants = {}
+
     # source_path points at the Combat Tracker so Excel export can still write HP/status
     # back into the creature tabs.
     enc = Encounter(source_path=tracker_path)
@@ -190,6 +199,10 @@ def load_battle(lib_path: str, tracker_path: str, battle_id: str) -> Encounter:
         combatant = build_combatant_from_row(row, resolve)
         if combatant is None:
             continue
+        vid = row.get("variant_id")
+        if vid and vid in variants:
+            from .game_data import apply_variant
+            apply_variant(combatant, variants[vid])
         enc.combatants[combatant.id] = combatant
         enc.order.append(combatant.id)
     return enc

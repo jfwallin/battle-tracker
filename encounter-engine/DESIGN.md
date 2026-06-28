@@ -21,7 +21,9 @@ assists DM judgment; it does not auto-adjudicate full 5e rules.
   lives in inline `<script>` blocks in the templates; `static/app.js` is an intentional no-op
   placeholder.
 - **State:** one in-memory `Encounter` object, autosaved to `data/encounter_state.json` after
-  every mutation. Excel is read on load and written only on explicit export.
+  every mutation. `Combat Tracker.xlsx` is read-only (creature library); the companion workbooks
+  `Battle_Library.xlsx` (battles) and `Game_Data.xlsx` (party profiles, variants, recurring NPCs)
+  are written by the in-app editors; the report/Excel exports write separate files on demand.
 - **Run mode:** `python app.py`, localhost:5000, single user, no auth.
 
 ## 3. File structure
@@ -37,14 +39,16 @@ encounter-engine/
     combat.py               # HP/status derivation, turn/round logic, damage/heal, group allocation, conditions
     workspace.py            # workspace directory discovery + remembered-workspace config (Stage 1)
     battle_library.py       # list/load/build reusable battle definitions referencing Combat Tracker (Stage 1–2)
-    game_data.py            # optional Game_Data.xlsx: party profiles (Stage 3)
+    game_data.py            # optional Game_Data.xlsx: party profiles, variants, recurring NPCs (Stage 3)
+    battle_report.py        # Scorecard + Detailed Log export from the combat log (Stage 4)
   templates/
     base.html               # layout shell
-    setup.html              # workspace + battle picker + load/resume + roster preview + initiative + Start
-    encounter.html          # the live combat dashboard (cards + all modals + most JS)
+    setup.html              # workspace + battle picker/builder + party profiles + variants + recurring NPCs + roster/initiative
+    encounter.html          # the live combat dashboard (banner + enemy strip + cards + all modals + most JS)
   static/  (style.css, app.js, dice_roller.js)
-  data/    (encounter_state.json, workspace.json)
-  tests/   (pytest unit tests for loader, dice, combat, workspace, battle_library; make_sample_library.py)
+  data/    (encounter_state.json, workspace.json)   # the .xlsx workbooks live in the chosen workspace dir, not here
+  tests/   (pytest: loader, loader_refactor, dice, combat, workspace, battle_library, battle_builder,
+            game_data, variants, recurring_npcs, battle_report; make_sample_library.py)
   DESIGN.md, MONSTER_CARD_TEMPLATE.md, Encounter Engine Expansion.md
 ```
 
@@ -73,7 +77,7 @@ Member { id, name, max_hp, conditions, can_attack, status_override }   # group m
 Attack { name, attack_type, to_hit:int|null, reach, damage_dice:[DamageDie], save_dc:int|null, save_ability, effect }
 DamageDie { n, die, bonus, damage_type }
 LimitedUse { name, max_uses, used }
-LogEvent { id, round, turn, source, target, target_id, member_id, event_type, amount, damage_type, attack_name, notes, ts }
+LogEvent { id, round, turn, source, target, target_id, member_id, event_type, amount, damage_type, attack_name, notes, ts, outcome, roll }
 ```
 
 **Derived (enriched) fields** added by `_encounter_json()` for the frontend, not stored:
@@ -125,9 +129,21 @@ recomputes HP for free. See `current_hp` / `current_hp_member` in `engine/combat
 - **Crit rule:** doubles the **dice**, not the flat bonus (`roll_damage(crit=True)`).
 
 ### Group attacks (`/api/group/<id>/attack`)
+The attack pool can be **split across multiple targets in one action** (e.g. 3 hobgoblins → PC#1,
+5 → PC#2). The modal has a target-allocation list (target / # attackers / AC, **+ Add target**,
+live "remaining" tally); the request sends `targets:[{target_id, count, ac_override}]` and the
+route returns a `segments[]` array (one per target). The pool is **partitioned** — each attacker
+is assigned to exactly one target, `sum(count) ≤ pool` (400 if exceeded; under-pool holds attackers
+back). A single target is just a 1-segment case, and the legacy single-`target_id` request shape
+still works. Each segment renders independently, batch keeps its per-attacker chips + AC recount,
+and applies to its own target (per-segment **Apply** + **Apply All**).
+
 Three modes, explained inline in the modal:
-- **Batch** — rolls a separate d20 per attacker in the pool, then rolls damage **per hit**, so
-  each crit doubles **its own** dice. Best for ≤ ~10 attackers.
+- **Batch** — rolls a separate d20 per attacker in the pool and pre-rolls **every** attacker's
+  damage (crit doubles its own dice). The modal shows a chip per attacker (total, hit/miss, crit)
+  and an editable **Target AC** with **Recount** — so if a target casts Shield (+5 AC) the DM can
+  re-evaluate which attackers still hit and the total damage, computed from the same rolls (no
+  re-roll). Best for ≤ ~10 attackers.
 - **Mob** — no d20s; estimates hits from the 5e mob table (`required = clamp(AC − toHit, 1, 20)`,
   attackers-per-hit lookup), then rolls damage once per estimated hit. Fast for swarms; no crits.
 - **Average** — hits × average damage, fully deterministic.
@@ -158,6 +174,48 @@ Three modes, explained inline in the modal:
 - On the roster page, **AC and Max HP are editable** (`/api/combatant/<id>/stats`) — e.g. to
   beef up an NPC. For a group, Max HP is per-member and syncs to all members. **These edits
   live only in the encounter state and are never written back to Excel.**
+
+### Banner & enemy status strip
+- The encounter banner shows Round, current turn, next up, and enemy summary (count / total HP /
+  attack pool), with the always-visible **Next Turn** button.
+- A sticky **enemy status strip** under the banner shows one pill per NPC — green (active) /
+  yellow (bloodied) / red+struck (down) with current/max HP, groups showing alive/total members.
+  The header reads "Enemies up X/Y" and flips to a green **"✓ ALL ENEMIES DOWN"** when the last
+  one falls (so you don't keep taking turns after the fight's over). HP bar math uses
+  `effectiveMaxHp` = `max_hp × member count` for groups, so the bar/label can't disagree.
+
+### Battle Report (Stage 4 of the expansion, report slice)
+
+- `LogEvent` gained `outcome` ("hit"/"crit"/"miss"/"saved"/"failed"/"immune") and `roll` (the
+  d20 total), both optional/backward-compatible. The attack-apply route records the outcome;
+  a new `/api/attack/log-miss` records misses (amount 0, so HP is unaffected); the AoE route
+  logs each target's save result + roll (including no-damage saves/immunity via `combat.log_event`).
+- `engine/battle_report.py` `export_report(encounter, path, player_safe)` writes two sheets:
+  a **Scorecard** (combatants by initiative × round, each cell a concise summary like
+  "Fireball: 1 failed, 1 saved, 33 dmg → Prag, Rex", plus a Total-Damage-Dealt column) and a
+  **Detailed Log** (chronological, every field). `player_safe` omits the DM Notes column and
+  combatants still flagged Hidden/Removed. A 📋 Report button in the encounter banner calls it.
+- It's purely log-derived, so editing/undoing log rows changes the report too.
+- **Group volleys report real hit counts.** When a group attack on a single target is applied, the
+  damage event carries `hits`/`crits`/`attacks` (added to `LogEvent`, threaded through `apply_damage`
+  and the `/api/combatant/<id>/damage` route from the segment's roll). The scorecard reads them —
+  "Longbow: 8 hit (2 crit) of 8, 60 dmg → Rex" — and the Detailed Log gains **Hits** / **Attacks**
+  columns. Remaining gap: a group attacking *another group* still spills into per-member damage
+  events (no single volley summary), since group HP must be member-keyed.
+
+### Variants & Recurring NPCs (Stage 3 of the expansion)
+
+- **Variants** — reusable stat-block modifications in `Game_Data.xlsx` (`Variants` sheet; engine
+  `list/get/save/delete_variant`, `apply_variant`). Each numeric field is an **expression**:
+  `20` sets, `+2`/`-1` adjusts, `x1.5` multiplies (`_apply_expr`). A variant can change AC, Max HP
+  (syncs group members), Init Mod, Attacks/Round, every attack's To-Hit, append resist/immune,
+  add notes, and tag the display name (e.g. "Korrum (Elite)"). Applied per-row in the builder via
+  the **Variant ID** column (K) and layered on at `load_battle` time, on top of the resolved base
+  creature. Routes `/api/variants[/<id>]`.
+- **Recurring NPCs** — named individuals (`Recurring NPCs` sheet) = a base creature source + an
+  optional variant + persistent notes/status. The builder has an "Add Recurring NPC" picker that
+  inserts a pre-configured row. Routes `/api/recurring-npcs[/<id>]`. Battle injuries are never
+  auto-written back to these records.
 
 ### Party Profiles (Stage 3 of the expansion, party-profiles slice)
 
@@ -192,7 +250,8 @@ Three modes, explained inline in the modal:
 
 - A **workspace** is a directory of standard files, remembered in `data/workspace.json`
   (`engine/workspace.py`): `Combat Tracker.xlsx` (required), `Battle_Library.xlsx` (optional,
-  enables prepared battles), `Game_Data.xlsx` (optional, not used yet). Filename matching is
+  enables prepared battles), `Game_Data.xlsx` (optional — party profiles, variants, recurring
+  NPCs). Filename matching is
   **case-insensitive** (the real library file is `combat tracker.xlsx`). Discovery reports each
   file found/missing with a specific message; only the Combat Tracker is required.
 - **`Battle_Library.xlsx`** holds reusable battle definitions (`engine/battle_library.py`): a
@@ -209,8 +268,9 @@ Three modes, explained inline in the modal:
   the tracker, so Excel export still works) — later edits to source workbooks never alter an
   in-progress battle. The setup page's battle picker reuses the existing roster-preview →
   initiative → Start flow unchanged. The legacy single-file load remains for the no-workspace
-  case. Validation: hard errors for missing files/sheets; soft `warnings[]` for broken source
-  tabs, bad quantities/modes, and not-yet-supported Variant/Trigger columns.
+  case. A row's **Variant ID** (col K) is resolved from `Game_Data.xlsx` and layered on at load
+  (see Variants below). Validation: hard errors for missing files/sheets; soft `warnings[]` for
+  broken source tabs, bad quantities/modes, and the not-yet-supported Trigger column (Stage 5).
 
 ## 6. REST API
 
@@ -229,6 +289,8 @@ re-renders. Pages: `GET /`, `GET /encounter`.
 | POST | `/api/battles/<id>/duplicate` · DELETE `/api/battles/<id>` | duplicate / remove a battle |
 | GET  | `/api/party-profiles` · GET `/api/party-profiles/<id>` | list / read party profiles (Game_Data.xlsx) |
 | POST | `/api/party-profiles/save` · DELETE `/api/party-profiles/<id>` | create-update / remove a party profile |
+| GET  | `/api/variants[/<id>]` · POST `/api/variants/save` · DELETE `/api/variants/<id>` | reusable stat-block variants |
+| GET  | `/api/recurring-npcs[/<id>]` · POST `/save` · DELETE `/<id>` | named recurring NPCs |
 | POST | `/api/resume` | reload `encounter_state.json` |
 | GET  | `/api/state` | full enriched encounter JSON |
 | POST | `/api/initiative/roll` `{scope: all\|npcs\|pcs}` | roll initiative |
@@ -238,7 +300,9 @@ re-renders. Pages: `GET /`, `GET /encounter`.
 | POST | `/api/combatant/<id>/stats` `{ac?, max_hp?}` | manual AC/HP edit (not exported) |
 | POST | `/api/combatant/<id>/status` · `/notes` | status override / notes |
 | POST | `/api/combatant/<id>/member/<mid>/status` · `/can-attack` | per-member edits |
-| POST | `/api/attack/roll` · `/api/attack/apply` | roll an attack / write its damage |
+| POST | `/api/attack/roll` · `/api/attack/apply` | roll an attack / write its damage (apply carries outcome+roll) |
+| POST | `/api/attack/log-miss` | record a missed attack (no HP change) for the report |
+| POST | `/api/export-report` `{path, player_safe}` | write the battle Scorecard + Detailed Log workbook |
 | POST | `/api/group/<id>/allocate` `{mode}` | focused/frontload/even group damage |
 | POST | `/api/group/<id>/attack` `{mode: batch\|mob\|average, ac_override?}` | group attack |
 | POST | `/api/spell/roll-damage` | roll a dice expression (no mutation) |
@@ -255,14 +319,17 @@ autosaves, and returns the enriched JSON.
 
 ## 7. Frontend structure
 
-- **setup.html** — load/resume, roster preview table with inline-editable AC / Max HP /
-  initiative, initiative roll buttons, Start Encounter.
-- **encounter.html** — the dashboard. Card renderers: `renderPCCard`, `renderMonsterCard`,
-  `renderGroupCard`, `renderMemberRow`. Modals: attack, group-attack, condition, stat-block,
-  AoE, Mass Heal, dice-roller. Shared helpers: `healTargetsFor`/`healTargetOptions`,
-  `dmgTargetOptions` (annotates options with AC), `parseAmount`, `escHtml`/`escJs`,
-  `renderDamageResult`. State lives in `ENC` (the last fetched encounter); every mutation
-  re-fetches and re-renders.
+- **setup.html** — resume card; **Workspace** card (set/discover); **Prepared Battles** picker
+  with per-battle Party selector + Load/Edit/Duplicate/Delete and the in-app **battle builder**
+  (source picker, recurring-NPC picker, editable roster table with a per-row Variant dropdown);
+  **Party Profiles**, **Variants**, and **Recurring NPCs** editor cards; the legacy single-workbook
+  loader; and the roster preview (inline-editable AC/Max HP/initiative) → initiative → Start flow.
+- **encounter.html** — the dashboard: banner + **enemy status strip**, then the combatant cards.
+  Card renderers: `renderPCCard`, `renderMonsterCard`, `renderGroupCard`, `renderMemberRow`.
+  Modals: attack, group-attack (batch chips + AC recount), condition, stat-block, AoE, Mass Heal,
+  dice-roller. Shared helpers: `healTargetsFor`/`healTargetOptions`, `dmgTargetOptions` (AC-annotated),
+  `parseAmount`, `effectiveMaxHp`, `escHtml`/`escJs`, `renderDamageResult`, `exportReport`. State
+  lives in `ENC` (the last fetched encounter); every mutation re-fetches and re-renders.
 
 ## 8. Persistence & Excel I/O
 
@@ -272,6 +339,10 @@ autosaves, and returns the enriched JSON.
   row with **Quantity 0** (or negative) is skipped entirely; blank Quantity defaults to 1.
 - "Export to Excel" writes current HP/status/log into a **copy** of the workbook; the source is
   never overwritten implicitly. Manual AC/HP edits are state-only and not part of the round-trip.
+- The **battle report** (`/api/export-report`) writes a separate Scorecard + Detailed Log file.
+- The in-app editors write directly to the **workspace** `Battle_Library.xlsx` / `Game_Data.xlsx`
+  (created on first save). If one is open in Excel the write fails clean with **HTTP 423**
+  ("close it and retry"). `Combat Tracker.xlsx` is never written.
 
 ## 9. Operational notes / gotchas
 
@@ -286,6 +357,9 @@ autosaves, and returns the enriched JSON.
   this.
 - **Roster edits need Load, not Resume.** The editable AC/HP fields live on the roster page,
   which only appears after "Load Workbook"; "Resume" jumps straight to the encounter page.
+- **Close companion workbooks before saving.** Saving a battle/profile/variant/recurring-NPC (or
+  a report to an open file) fails with HTTP 423 if `Battle_Library.xlsx` / `Game_Data.xlsx` (or
+  the target) is open in Excel. The UI surfaces a "close it and retry" message.
 
 ## 10. Non-goals (unchanged from v1)
 

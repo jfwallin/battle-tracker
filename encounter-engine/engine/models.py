@@ -233,12 +233,18 @@ class LogEvent:
     target: str        # combatant name or member name
     target_id: str     # combatant id
     member_id: Optional[str]  # member id if targeting a group member
-    event_type: str    # "damage", "heal", "adjustment", "condition_add", "condition_remove", "note"
+    event_type: str    # "damage", "heal", "miss", "condition_add", "condition_remove", ...
     amount: int        # HP delta (positive = damage or heal amount)
     damage_type: str
     attack_name: str
     notes: str
     ts: str            # ISO timestamp
+    outcome: str = ""  # "hit"|"crit"|"miss"|"saved"|"failed"|"immune"|"" — for the battle report
+    roll: Optional[int] = None  # attack/save d20 total, when known
+    # Group-volley summary (None = not a volley → report counts it as a single hit):
+    hits: Optional[int] = None    # how many attackers hit
+    crits: int = 0                # how many of those were crits
+    attacks: Optional[int] = None  # how many attackers rolled in this volley
 
     def to_dict(self) -> dict:
         return {
@@ -255,6 +261,11 @@ class LogEvent:
             "attack_name": self.attack_name,
             "notes": self.notes,
             "ts": self.ts,
+            "outcome": self.outcome,
+            "roll": self.roll,
+            "hits": self.hits,
+            "crits": self.crits,
+            "attacks": self.attacks,
         }
 
     @classmethod
@@ -273,6 +284,11 @@ class LogEvent:
             attack_name=d.get("attack_name", ""),
             notes=d.get("notes", ""),
             ts=d.get("ts", ""),
+            outcome=d.get("outcome", ""),
+            roll=d.get("roll"),
+            hits=d.get("hits"),
+            crits=d.get("crits", 0),
+            attacks=d.get("attacks"),
         )
 
 

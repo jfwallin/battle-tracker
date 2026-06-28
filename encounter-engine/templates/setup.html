@@ -73,6 +73,7 @@
         <button class="btn btn-ghost btn-xs" onclick="addRow('Hazard')">+ Hazard</button>
         <button class="btn btn-ghost btn-xs" onclick="addRow('Event')">+ Event</button>
       </div>
+      <div id="recurring-picker-wrap" class="source-list" style="margin-top:4px"></div>
 
       <h4>Roster</h4>
       <div id="builder-rows"></div>
@@ -109,6 +110,74 @@
         <button class="btn btn-primary" onclick="savePartyProfile()">Save Profile</button>
         <button class="btn btn-ghost" onclick="closeProfile()">Cancel</button>
         <span id="profile-error" class="error-msg" style="display:none"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variants (Game_Data.xlsx) -->
+  <div class="card" id="variant-section" {% if not combat_tracker_path %}style="display:none"{% endif %}>
+    <div class="section-head">
+      <h2>Variants</h2>
+      <button class="btn btn-primary btn-sm" onclick="newVariant()">+ New Variant</button>
+    </div>
+    <p class="muted">Reusable stat-block tweaks (Elite, Armored, Wounded…) you apply per creature in the builder.
+      Each value is a number to <em>set</em>, <code>+2</code>/<code>-1</code> to <em>adjust</em>, or <code>x1.5</code> to <em>multiply</em>.</p>
+    <div id="variant-list"></div>
+
+    <div id="variant-panel" class="builder-panel" style="display:none">
+      <h3 id="variant-title">New Variant</h3>
+      <div class="field-row"><label for="v-id">Variant ID</label>
+        <input type="text" id="v-id" class="path-input" placeholder="e.g. elite"></div>
+      <div class="field-row"><label for="v-name">Name</label>
+        <input type="text" id="v-name" class="path-input" placeholder="shown as a suffix, e.g. Elite"></div>
+      <div class="field-row">
+        <label>AC</label><input type="text" id="v-ac" class="dmg-input" placeholder="+2">
+        <label style="min-width:auto">Max HP</label><input type="text" id="v-hp" class="dmg-input" placeholder="x1.5">
+        <label style="min-width:auto">Init</label><input type="text" id="v-init" class="dmg-input" placeholder="+1">
+        <label style="min-width:auto">Atks/Rd</label><input type="text" id="v-atks" class="dmg-input" placeholder="2">
+        <label style="min-width:auto">To-Hit</label><input type="text" id="v-tohit" class="dmg-input" placeholder="+1">
+      </div>
+      <div class="field-row"><label for="v-resist">Resist (add)</label>
+        <input type="text" id="v-resist" class="path-input" placeholder="fire, cold"></div>
+      <div class="field-row"><label for="v-immune">Immune (add)</label>
+        <input type="text" id="v-immune" class="path-input" placeholder="poison"></div>
+      <div class="field-row"><label for="v-notes">Notes</label>
+        <input type="text" id="v-notes" class="path-input"></div>
+      <div class="field-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="saveVariant()">Save Variant</button>
+        <button class="btn btn-ghost" onclick="closeVariant()">Cancel</button>
+        <span id="variant-error" class="error-msg" style="display:none"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recurring NPCs (Game_Data.xlsx) -->
+  <div class="card" id="recurring-section" {% if not combat_tracker_path %}style="display:none"{% endif %}>
+    <div class="section-head">
+      <h2>Recurring NPCs</h2>
+      <button class="btn btn-primary btn-sm" onclick="newRecurring()">+ New NPC</button>
+    </div>
+    <p class="muted">Named individuals built on a base creature (with an optional variant and persistent notes). Add them to battles from the builder.</p>
+    <div id="recurring-list"></div>
+
+    <div id="recurring-panel" class="builder-panel" style="display:none">
+      <h3 id="recurring-title">New Recurring NPC</h3>
+      <div class="field-row"><label for="n-id">NPC ID</label>
+        <input type="text" id="n-id" class="path-input" placeholder="e.g. captain-voss"></div>
+      <div class="field-row"><label for="n-name">Display Name</label>
+        <input type="text" id="n-name" class="path-input" placeholder="e.g. Captain Voss"></div>
+      <div class="field-row"><label for="n-source">Base Source</label>
+        <input type="text" id="n-source" class="path-input" placeholder="creature tab, e.g. Ganador Veteran"></div>
+      <div class="field-row"><label for="n-variant">Variant</label>
+        <select id="n-variant"></select></div>
+      <div class="field-row"><label for="n-status">Status</label>
+        <input type="text" id="n-status" class="dmg-input" placeholder="optional">
+        <label for="n-notes" style="min-width:auto">Notes</label>
+        <input type="text" id="n-notes" class="path-input"></div>
+      <div class="field-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="saveRecurring()">Save NPC</button>
+        <button class="btn btn-ghost" onclick="closeRecurring()">Cancel</button>
+        <span id="recurring-error" class="error-msg" style="display:none"></span>
       </div>
     </div>
   </div>
@@ -190,6 +259,8 @@ function renderWorkspaceMessages(messages) {
 
 async function loadBattles() {
   await loadPartyProfiles();   // populate _profiles so the per-battle party picker is ready
+  await loadVariants();        // populate _variants for the builder's per-row dropdown
+  await loadRecurring();       // populate recurring NPCs for the builder picker
   const list = document.getElementById('battle-list');
   list.innerHTML = '<p class="muted">Loading battles…</p>';
   const data = await (await fetch('/api/battles')).json();
@@ -296,6 +367,8 @@ async function openBuilder(b) {
   document.getElementById('builder-error').style.display = 'none';
   document.getElementById('source-search').value = '';
   await ensureSources();
+  await loadVariants();    // populate the per-row Variant dropdown
+  await loadRecurring();   // populate the recurring-NPC picker
   renderSources();
   renderBuilderRows();
   const panel = document.getElementById('builder-panel');
@@ -344,8 +417,12 @@ function renderBuilderRows() {
   const inp = (i, field, cur, ph, w) =>
     `<input type="text" value="${escHtml(cur ?? '')}" placeholder="${ph}" style="width:${w}"
        oninput="setRowField(${i},'${field}',this.value)">`;
+  const variantSel = (i, cur) =>
+    `<select onchange="setRowField(${i},'variant_id',this.value)"><option value="">—</option>` +
+    _variants.map(v => `<option value="${escJs(v.id)}" ${cur===v.id?'selected':''}>${escHtml(v.name||v.id)}</option>`).join('') +
+    `</select>`;
   let html = `<table class="builder-table"><thead><tr>
-    <th>Type</th><th>Name</th><th>Source</th><th>Qty</th><th>Group</th><th>Init</th><th>HP ovr</th><th>Status</th><th>Notes</th><th></th>
+    <th>Type</th><th>Name</th><th>Source</th><th>Qty</th><th>Group</th><th>Init</th><th>HP ovr</th><th>Status</th><th>Variant</th><th>Notes</th><th></th>
     </tr></thead><tbody>`;
   html += _builder.rows.map((r, i) => `<tr>
     <td>${sel(i,'type',TYPES,r.type||'NPC')}</td>
@@ -356,6 +433,7 @@ function renderBuilderRows() {
     <td>${sel(i,'initiative_mode',INIT_MODES,r.initiative_mode||'Individual')}</td>
     <td>${inp(i,'hp_override',r.hp_override,'','46px')}</td>
     <td>${inp(i,'starting_status',r.starting_status,'','70px')}</td>
+    <td>${variantSel(i, r.variant_id)}</td>
     <td>${inp(i,'notes',r.notes,'','120px')}</td>
     <td><button class="btn btn-ghost btn-xs" onclick="removeRow(${i})">✕</button></td>
   </tr>`).join('');
@@ -497,6 +575,191 @@ async function deletePartyProfile(id) {
   loadBattles();
 }
 
+// ── Variants ────────────────────────────────────────────────────────────────────
+let _variants = [];
+const VARIANT_FIELDS = [['v-ac','ac'],['v-hp','max_hp'],['v-init','init_mod'],
+  ['v-atks','attacks_per_round'],['v-tohit','to_hit'],['v-resist','resistances'],
+  ['v-immune','immunities'],['v-notes','notes']];
+
+async function loadVariants() {
+  const data = await (await fetch('/api/variants')).json();
+  _variants = data.ok ? data.variants : [];
+  renderVariantList();
+}
+
+function variantSummary(v) {
+  const bits = [];
+  if (v.ac) bits.push('AC ' + v.ac);
+  if (v.max_hp) bits.push('HP ' + v.max_hp);
+  if (v.to_hit) bits.push('to-hit ' + v.to_hit);
+  if (v.attacks_per_round) bits.push('atks ' + v.attacks_per_round);
+  if (v.init_mod) bits.push('init ' + v.init_mod);
+  if (v.resistances) bits.push('resist ' + v.resistances);
+  if (v.immunities) bits.push('immune ' + v.immunities);
+  return bits.join(' · ');
+}
+
+function renderVariantList() {
+  const el = document.getElementById('variant-list');
+  if (!el) return;
+  if (!_variants.length) { el.innerHTML = '<p class="muted">No variants yet — create one.</p>'; return; }
+  el.innerHTML = _variants.map(v => `<div class="profile-row">
+    <strong>${escHtml(v.name || v.id)}</strong> <span class="muted">[${escHtml(v.id)}]</span>
+    <span class="profile-members">${escHtml(variantSummary(v))}</span>
+    <button class="btn btn-ghost btn-xs" onclick="editVariant('${escJs(v.id)}')">Edit</button>
+    <button class="btn btn-ghost btn-xs" onclick="deleteVariant('${escJs(v.id)}')">Delete</button>
+  </div>`).join('');
+}
+
+function newVariant() { openVariant({ id: '' }); }
+
+async function editVariant(id) {
+  const data = await (await fetch(`/api/variants/${encodeURIComponent(id)}`)).json();
+  if (!data.ok) { alert(data.error || 'Could not open variant'); return; }
+  openVariant(data.variant);
+}
+
+function openVariant(v) {
+  document.getElementById('variant-title').textContent = v.id ? `Edit: ${v.id}` : 'New Variant';
+  document.getElementById('v-id').value = v.id || '';
+  document.getElementById('v-name').value = v.name || '';
+  VARIANT_FIELDS.forEach(([el, key]) => { document.getElementById(el).value = v[key] || ''; });
+  document.getElementById('variant-error').style.display = 'none';
+  const p = document.getElementById('variant-panel');
+  p.style.display = 'block';
+  p.scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeVariant() { document.getElementById('variant-panel').style.display = 'none'; }
+
+async function saveVariant() {
+  const err = document.getElementById('variant-error');
+  err.style.display = 'none';
+  const id = document.getElementById('v-id').value.trim();
+  if (!id) { err.textContent = 'Variant ID is required.'; err.style.display = 'inline'; return; }
+  const payload = { id, name: document.getElementById('v-name').value.trim() };
+  VARIANT_FIELDS.forEach(([el, key]) => { payload[key] = document.getElementById(el).value.trim(); });
+  const data = await (await fetch('/api/variants/save', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  })).json();
+  if (!data.ok) { err.textContent = data.error || 'Save failed'; err.style.display = 'inline'; return; }
+  closeVariant();
+  loadVariants();
+}
+
+async function deleteVariant(id) {
+  if (!confirm(`Delete variant “${id}”?`)) return;
+  const data = await (await fetch(`/api/variants/${encodeURIComponent(id)}`, { method: 'DELETE' })).json();
+  if (!data.ok) { alert(data.error || 'Delete failed'); return; }
+  loadVariants();
+}
+
+// ── Recurring NPCs ──────────────────────────────────────────────────────────────
+let _recurring = [];
+
+async function loadRecurring() {
+  const data = await (await fetch('/api/recurring-npcs')).json();
+  _recurring = data.ok ? data.npcs : [];
+  renderRecurringList();
+  renderRecurringPicker();
+}
+
+function recurringSummary(n) {
+  const bits = [n.base_source || '?'];
+  if (n.variant_id) bits.push('variant: ' + n.variant_id);
+  if (n.status) bits.push(n.status);
+  return bits.join(' · ');
+}
+
+function renderRecurringList() {
+  const el = document.getElementById('recurring-list');
+  if (!el) return;
+  if (!_recurring.length) { el.innerHTML = '<p class="muted">No recurring NPCs yet.</p>'; return; }
+  el.innerHTML = _recurring.map(n => `<div class="profile-row">
+    <strong>${escHtml(n.name || n.id)}</strong> <span class="muted">[${escHtml(n.id)}]</span>
+    <span class="profile-members">${escHtml(recurringSummary(n))}${n.notes ? ' — ' + escHtml(n.notes) : ''}</span>
+    <button class="btn btn-ghost btn-xs" onclick="editRecurring('${escJs(n.id)}')">Edit</button>
+    <button class="btn btn-ghost btn-xs" onclick="deleteRecurring('${escJs(n.id)}')">Delete</button>
+  </div>`).join('');
+}
+
+function variantOptions(sel) {
+  return `<option value="">—</option>` +
+    _variants.map(v => `<option value="${escJs(v.id)}" ${sel===v.id?'selected':''}>${escHtml(v.name||v.id)}</option>`).join('');
+}
+
+function newRecurring() { openRecurring({ id: '' }); }
+
+async function editRecurring(id) {
+  const data = await (await fetch(`/api/recurring-npcs/${encodeURIComponent(id)}`)).json();
+  if (!data.ok) { alert(data.error || 'Could not open NPC'); return; }
+  openRecurring(data.npc);
+}
+
+function openRecurring(n) {
+  document.getElementById('recurring-title').textContent = n.id ? `Edit: ${n.id}` : 'New Recurring NPC';
+  document.getElementById('n-id').value = n.id || '';
+  document.getElementById('n-name').value = n.name || '';
+  document.getElementById('n-source').value = n.base_source || '';
+  document.getElementById('n-variant').innerHTML = variantOptions(n.variant_id || '');
+  document.getElementById('n-status').value = n.status || '';
+  document.getElementById('n-notes').value = n.notes || '';
+  document.getElementById('recurring-error').style.display = 'none';
+  const p = document.getElementById('recurring-panel');
+  p.style.display = 'block';
+  p.scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeRecurring() { document.getElementById('recurring-panel').style.display = 'none'; }
+
+async function saveRecurring() {
+  const err = document.getElementById('recurring-error');
+  err.style.display = 'none';
+  const id = document.getElementById('n-id').value.trim();
+  const base = document.getElementById('n-source').value.trim();
+  if (!id) { err.textContent = 'NPC ID is required.'; err.style.display = 'inline'; return; }
+  if (!base) { err.textContent = 'Base Source is required.'; err.style.display = 'inline'; return; }
+  const payload = {
+    id, name: document.getElementById('n-name').value.trim(), base_source: base,
+    variant_id: document.getElementById('n-variant').value,
+    status: document.getElementById('n-status').value.trim(),
+    notes: document.getElementById('n-notes').value.trim(),
+  };
+  const data = await (await fetch('/api/recurring-npcs/save', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  })).json();
+  if (!data.ok) { err.textContent = data.error || 'Save failed'; err.style.display = 'inline'; return; }
+  closeRecurring();
+  loadRecurring();
+}
+
+async function deleteRecurring(id) {
+  if (!confirm(`Delete recurring NPC “${id}”?`)) return;
+  const data = await (await fetch(`/api/recurring-npcs/${encodeURIComponent(id)}`, { method: 'DELETE' })).json();
+  if (!data.ok) { alert(data.error || 'Delete failed'); return; }
+  loadRecurring();
+}
+
+// Builder picker: insert a configured row for a recurring NPC.
+function renderRecurringPicker() {
+  const el = document.getElementById('recurring-picker-wrap');
+  if (!el) return;
+  if (!_recurring.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<span class="muted">Recurring NPCs:</span> ` + _recurring.map(n =>
+    `<button class="source-chip" onclick="addRecurringRow('${escJs(n.id)}')">${escHtml(n.name||n.id)}</button>`).join(' ');
+}
+
+function addRecurringRow(id) {
+  const n = _recurring.find(x => x.id === id);
+  if (!n) return;
+  _builder.rows.push({
+    type: 'NPC', name: n.name || n.id, npc_source: n.base_source || '', quantity: 1,
+    group_name: '', initiative_mode: 'Individual', hp_override: '',
+    notes: n.notes || '', starting_status: n.status || '', variant_id: n.variant_id || '',
+  });
+  renderBuilderRows();
+}
+
 async function resumeEncounter() {
   const r = await fetch('/api/resume', { method: 'POST' });
   const data = await r.json();
@@ -625,6 +888,6 @@ async function startEncounter() {
 // On load: pull battles (which also pulls party profiles), or just party profiles if a
 // workspace/tracker is set without a Battle Library yet.
 if ({{ 'true' if battle_library_found else 'false' }}) { loadBattles(); }
-else if ({{ 'true' if combat_tracker_path else 'false' }}) { loadPartyProfiles(); }
+else if ({{ 'true' if combat_tracker_path else 'false' }}) { loadPartyProfiles(); loadVariants(); loadRecurring(); }
 </script>
 {% endblock %}
