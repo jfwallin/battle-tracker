@@ -10,6 +10,17 @@ from flask import Flask, jsonify, render_template, request, session
 
 from engine.models import Encounter, LimitedUse, make_id
 from engine.excel_loader import load_encounter
+from engine.workspace import (
+    discover_workspace, load_workspace_config, save_workspace_config,
+)
+from engine.battle_library import (
+    delete_battle, duplicate_battle, get_battle_definition, list_battles,
+    list_sources, load_battle, save_battle,
+)
+from engine.game_data import (
+    apply_party_profile, delete_party_profile, get_party_profile,
+    list_party_profiles, save_party_profile,
+)
 from engine.combat import (
     add_condition, allocate_damage_each, allocate_damage_even, allocate_damage_focused,
     allocate_damage_frontload, allocate_heal_each, allocate_heal_even, apply_damage,
@@ -101,10 +112,24 @@ def require_encounter(fn):
 def index():
     global _encounter
     saved = _load_state()
+    config = load_workspace_config()
+    workspace_dir = config.get("workspace_dir", "") if config else ""
+    discovery = discover_workspace(workspace_dir) if workspace_dir else None
+    battle_library_found = bool(
+        discovery and discovery["files"]["battle_library"]["found"]
+    )
     return render_template(
         "setup.html",
         has_saved=saved is not None,
         saved_source=saved.source_path if saved else "",
+        workspace_dir=workspace_dir,
+        workspace_messages=discovery["messages"] if discovery else [],
+        workspace_ok=bool(discovery and discovery["ok"]),
+        battle_library_found=battle_library_found,
+        combat_tracker_path=(
+            discovery["files"]["combat_tracker"]["path"]
+            if discovery and discovery["files"]["combat_tracker"]["found"] else ""
+        ),
     )
 
 
@@ -150,6 +175,228 @@ def api_resume():
 @require_encounter
 def api_state():
     return jsonify({"encounter": _encounter_json()})
+
+
+# ── Workspace / Battle Library ─────────────────────────────────────────────────
+
+def _current_discovery() -> Optional[dict]:
+    """Discover the remembered workspace, or None if no workspace is set."""
+    config = load_workspace_config()
+    wdir = config.get("workspace_dir") if config else None
+    return discover_workspace(wdir) if wdir else None
+
+
+@app.route("/api/workspace")
+def api_workspace_get():
+    disc = _current_discovery()
+    return jsonify({
+        "workspace_dir": disc["dir"] if disc else None,
+        "discovery": disc,
+    })
+
+
+@app.route("/api/workspace/set", methods=["POST"])
+def api_workspace_set():
+    data = request.get_json(force=True)
+    wdir = (data.get("dir") or "").strip()
+    if not wdir or not os.path.isdir(wdir):
+        return jsonify({"error": f"Directory not found: {wdir}"}), 400
+    save_workspace_config(wdir)
+    return jsonify({"ok": True, "discovery": discover_workspace(wdir)})
+
+
+@app.route("/api/battles")
+def api_battles():
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    lib = disc["files"]["battle_library"]
+    if not lib["found"]:
+        return jsonify({"error": "Battle_Library.xlsx not found in this workspace"}), 400
+    tracker = disc["files"]["combat_tracker"]["path"]  # may be None; list_battles tolerates it
+    try:
+        return jsonify({"ok": True, "battles": list_battles(lib["path"], tracker)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 422
+
+
+@app.route("/api/battles/<battle_id>/load", methods=["POST"])
+def api_load_battle(battle_id):
+    global _encounter
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    lib = disc["files"]["battle_library"]
+    tracker = disc["files"]["combat_tracker"]
+    if not lib["found"]:
+        return jsonify({"error": "Battle_Library.xlsx not found in this workspace"}), 400
+    if not tracker["found"]:
+        return jsonify({"error": "Combat Tracker.xlsx not found in this workspace"}), 400
+
+    # party_profile: a profile id, "" (none), or "__default__"/absent (use the battle's default)
+    body = request.get_json(silent=True) or {}
+    profile_id = body.get("party_profile", "__default__")
+    try:
+        enc = load_battle(lib["path"], tracker["path"], battle_id)
+
+        gd = disc["files"]["game_data"]
+        if profile_id == "__default__":
+            try:
+                profile_id = get_battle_definition(lib["path"], battle_id).get("default_party_profile") or ""
+            except Exception:
+                profile_id = ""
+        if profile_id and gd["found"]:
+            try:
+                apply_party_profile(enc, gd["path"], profile_id)
+            except ValueError:
+                pass  # unknown profile → just load the battle as-is
+
+        _encounter = enc
+        _save()
+        return jsonify({"ok": True, "encounter": _encounter_json()})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Battle Builder (Stage 2) ───────────────────────────────────────────────────
+
+def _lib_path_for_write(disc: dict) -> str:
+    """Path to the workspace Battle Library, defaulting to a to-be-created file."""
+    lib = disc["files"]["battle_library"]
+    return lib["path"] if lib["found"] else os.path.join(disc["dir"], "Battle_Library.xlsx")
+
+
+def _require_library(disc) -> Optional[str]:
+    """Return the library path if present, else None (caller returns 400)."""
+    if disc is None:
+        return None
+    lib = disc["files"]["battle_library"]
+    return lib["path"] if lib["found"] else None
+
+
+@app.route("/api/sources")
+def api_sources():
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    tracker = disc["files"]["combat_tracker"]
+    if not tracker["found"]:
+        return jsonify({"error": "Combat Tracker.xlsx not found in this workspace"}), 400
+    try:
+        return jsonify({"ok": True, "sources": list_sources(tracker["path"])})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/battles/<battle_id>/definition")
+def api_battle_definition(battle_id):
+    lib = _require_library(_current_discovery())
+    if lib is None:
+        return jsonify({"error": "No Battle Library in this workspace"}), 400
+    try:
+        return jsonify({"ok": True, "battle": get_battle_definition(lib, battle_id)})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.route("/api/battles/save", methods=["POST"])
+def api_save_battle():
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    try:
+        saved = save_battle(_lib_path_for_write(disc), request.get_json(force=True))
+        return jsonify({"ok": True, "saved": saved})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
+    except PermissionError:
+        return jsonify({"error": "Battle_Library.xlsx is open in Excel — close it and retry."}), 423
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/battles/<battle_id>/duplicate", methods=["POST"])
+def api_duplicate_battle(battle_id):
+    lib = _require_library(_current_discovery())
+    if lib is None:
+        return jsonify({"error": "No Battle Library in this workspace"}), 400
+    try:
+        return jsonify({"ok": True, "saved": duplicate_battle(lib, battle_id)})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except PermissionError:
+        return jsonify({"error": "Battle_Library.xlsx is open in Excel — close it and retry."}), 423
+
+
+@app.route("/api/battles/<battle_id>", methods=["DELETE"])
+def api_delete_battle(battle_id):
+    lib = _require_library(_current_discovery())
+    if lib is None:
+        return jsonify({"error": "No Battle Library in this workspace"}), 400
+    try:
+        delete_battle(lib, battle_id)
+        return jsonify({"ok": True})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except PermissionError:
+        return jsonify({"error": "Battle_Library.xlsx is open in Excel — close it and retry."}), 423
+
+
+# ── Party Profiles (Stage 3) ───────────────────────────────────────────────────
+
+@app.route("/api/party-profiles")
+def api_party_profiles():
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    gd = disc["files"]["game_data"]
+    if not gd["found"]:
+        return jsonify({"ok": True, "profiles": []})  # Game Data is optional
+    try:
+        return jsonify({"ok": True, "profiles": list_party_profiles(gd["path"])})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/party-profiles/<profile_id>")
+def api_party_profile_get(profile_id):
+    disc = _current_discovery()
+    if disc is None or not disc["files"]["game_data"]["found"]:
+        return jsonify({"error": "No Game Data in this workspace"}), 400
+    try:
+        return jsonify({"ok": True, "profile": get_party_profile(disc["files"]["game_data"]["path"], profile_id)})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.route("/api/party-profiles/save", methods=["POST"])
+def api_party_profile_save():
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    gd_path = disc["files"]["game_data"]["path"] or os.path.join(disc["dir"], "Game_Data.xlsx")
+    try:
+        return jsonify({"ok": True, "saved": save_party_profile(gd_path, request.get_json(force=True))})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
+    except PermissionError:
+        return jsonify({"error": "Game_Data.xlsx is open in Excel — close it and retry."}), 423
+
+
+@app.route("/api/party-profiles/<profile_id>", methods=["DELETE"])
+def api_party_profile_delete(profile_id):
+    disc = _current_discovery()
+    if disc is None or not disc["files"]["game_data"]["found"]:
+        return jsonify({"error": "No Game Data in this workspace"}), 400
+    try:
+        delete_party_profile(disc["files"]["game_data"]["path"], profile_id)
+        return jsonify({"ok": True})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except PermissionError:
+        return jsonify({"error": "Game_Data.xlsx is open in Excel — close it and retry."}), 423
 
 
 # ── Initiative ────────────────────────────────────────────────────────────────

@@ -1,217 +1,26 @@
 {
-  "round": 1,
-  "turn_index": 0,
+  "round": 2,
+  "turn_index": 4,
   "order": [
-    "24b411ba",
-    "1dd76eb1",
-    "9cc096af",
-    "efb3fc50",
-    "55736068",
-    "b36d9482",
-    "1dc4eb4f",
-    "ccf6a8c2",
-    "bc8df6b2"
+    "4e2d36b5",
+    "2d0acfcd",
+    "32ec9a9b",
+    "23f6bd98",
+    "10c43142",
+    "19ccb314",
+    "fc097ae1",
+    "cb1f24a7"
   ],
   "combatants": {
-    "b36d9482": {
-      "id": "b36d9482",
-      "name": "Rex",
-      "combatant_type": "PC",
-      "source_tab": "Rex",
-      "initiative": 15,
-      "initiative_mod": 0,
-      "ac": null,
-      "max_hp": null,
-      "temp_hp": 0,
-      "conditions": [],
-      "condition_notes": {},
-      "concentration": null,
-      "status_override": null,
-      "attacks": [],
-      "limited_use": [],
-      "is_group": false,
-      "members": [],
-      "initiative_mode": "Individual",
-      "attacks_per_round": 1,
-      "reaction_used": false,
-      "notes": "",
-      "speed": "",
-      "size_type_alignment": "",
-      "proficiency_bonus": 0,
-      "ability_scores": {},
-      "ability_mods": {},
-      "save_bonuses": {},
-      "resistances": "",
-      "immunities": "",
-      "condition_immunities": "",
-      "senses": "",
-      "traits": [],
-      "actions": [],
-      "bonus_actions": [],
-      "reactions": [],
-      "bloodied_effects": []
-    },
-    "9cc096af": {
-      "id": "9cc096af",
-      "name": "Prag",
-      "combatant_type": "PC",
-      "source_tab": "Prag",
-      "initiative": 18,
-      "initiative_mod": 0,
-      "ac": null,
-      "max_hp": null,
-      "temp_hp": 0,
-      "conditions": [],
-      "condition_notes": {},
-      "concentration": null,
-      "status_override": null,
-      "attacks": [],
-      "limited_use": [],
-      "is_group": false,
-      "members": [],
-      "initiative_mode": "Individual",
-      "attacks_per_round": 1,
-      "reaction_used": false,
-      "notes": "",
-      "speed": "",
-      "size_type_alignment": "",
-      "proficiency_bonus": 0,
-      "ability_scores": {},
-      "ability_mods": {},
-      "save_bonuses": {},
-      "resistances": "",
-      "immunities": "",
-      "condition_immunities": "",
-      "senses": "",
-      "traits": [],
-      "actions": [],
-      "bonus_actions": [],
-      "reactions": [],
-      "bloodied_effects": []
-    },
-    "efb3fc50": {
-      "id": "efb3fc50",
-      "name": "Roquist",
-      "combatant_type": "PC",
-      "source_tab": "Roquist",
-      "initiative": 17,
-      "initiative_mod": 0,
-      "ac": null,
-      "max_hp": null,
-      "temp_hp": 0,
-      "conditions": [],
-      "condition_notes": {},
-      "concentration": null,
-      "status_override": null,
-      "attacks": [],
-      "limited_use": [],
-      "is_group": false,
-      "members": [],
-      "initiative_mode": "Individual",
-      "attacks_per_round": 1,
-      "reaction_used": false,
-      "notes": "",
-      "speed": "",
-      "size_type_alignment": "",
-      "proficiency_bonus": 0,
-      "ability_scores": {},
-      "ability_mods": {},
-      "save_bonuses": {},
-      "resistances": "",
-      "immunities": "",
-      "condition_immunities": "",
-      "senses": "",
-      "traits": [],
-      "actions": [],
-      "bonus_actions": [],
-      "reactions": [],
-      "bloodied_effects": []
-    },
-    "1dc4eb4f": {
-      "id": "1dc4eb4f",
-      "name": "Giggles",
-      "combatant_type": "PC",
-      "source_tab": "Giggles",
-      "initiative": 11,
-      "initiative_mod": 0,
-      "ac": null,
-      "max_hp": null,
-      "temp_hp": 0,
-      "conditions": [],
-      "condition_notes": {},
-      "concentration": null,
-      "status_override": null,
-      "attacks": [],
-      "limited_use": [],
-      "is_group": false,
-      "members": [],
-      "initiative_mode": "Individual",
-      "attacks_per_round": 1,
-      "reaction_used": false,
-      "notes": "",
-      "speed": "",
-      "size_type_alignment": "",
-      "proficiency_bonus": 0,
-      "ability_scores": {},
-      "ability_mods": {},
-      "save_bonuses": {},
-      "resistances": "",
-      "immunities": "",
-      "condition_immunities": "",
-      "senses": "",
-      "traits": [],
-      "actions": [],
-      "bonus_actions": [],
-      "reactions": [],
-      "bloodied_effects": []
-    },
-    "ccf6a8c2": {
-      "id": "ccf6a8c2",
-      "name": "Shaddow",
-      "combatant_type": "PC",
-      "source_tab": "Shaddow",
-      "initiative": 9,
-      "initiative_mod": 0,
-      "ac": null,
-      "max_hp": null,
-      "temp_hp": 0,
-      "conditions": [],
-      "condition_notes": {},
-      "concentration": null,
-      "status_override": null,
-      "attacks": [],
-      "limited_use": [],
-      "is_group": false,
-      "members": [],
-      "initiative_mode": "Individual",
-      "attacks_per_round": 1,
-      "reaction_used": false,
-      "notes": "",
-      "speed": "",
-      "size_type_alignment": "",
-      "proficiency_bonus": 0,
-      "ability_scores": {},
-      "ability_mods": {},
-      "save_bonuses": {},
-      "resistances": "",
-      "immunities": "",
-      "condition_immunities": "",
-      "senses": "",
-      "traits": [],
-      "actions": [],
-      "bonus_actions": [],
-      "reactions": [],
-      "bloodied_effects": []
-    },
-    "24b411ba": {
-      "id": "24b411ba",
-      "name": "Korrum",
+    "cb1f24a7": {
+      "id": "cb1f24a7",
+      "name": "Air Anchor Caster",
       "combatant_type": "NPC",
-      "source_tab": "Korrum",
-      "initiative": 24,
-      "initiative_mod": -1,
-      "ac": 16,
-      "max_hp": 1285,
+      "source_tab": "Air Anchor Caster",
+      "initiative": 1,
+      "initiative_mod": 0,
+      "ac": 12,
+      "max_hp": 18,
       "temp_hp": 0,
       "conditions": [],
       "condition_notes": {},
@@ -227,160 +36,108 @@
           "save_dc": null,
           "save_ability": "",
           "effect": "Effect"
-        },
-        {
-          "name": "Slam",
-          "attack_type": "Melee Weapon",
-          "to_hit": 11,
-          "reach": "10 ft.",
-          "damage_dice": [
-            {
-              "n": 3,
-              "die": 8,
-              "bonus": 7,
-              "damage_type": "bludgeoning"
-            }
-          ],
-          "save_dc": 17,
-          "save_ability": "STR",
-          "effect": "On hit, target pushed 10 ft. or knocked prone (DC 17 STR save)."
-        },
-        {
-          "name": "Boulder Hurl",
-          "attack_type": "Ranged Weapon",
-          "to_hit": 11,
-          "reach": "60/180 ft.",
-          "damage_dice": [
-            {
-              "n": 3,
-              "die": 10,
-              "bonus": 7,
-              "damage_type": "bludgeoning"
-            }
-          ],
-          "save_dc": 17,
-          "save_ability": "STR",
-          "effect": "If target is flying, DC 17 STR save or pushed 20 ft. and flying speed halved until start of its next turn."
         }
       ],
       "limited_use": [],
       "is_group": false,
       "members": [],
       "initiative_mode": "Individual",
-      "attacks_per_round": 3,
+      "attacks_per_round": 1,
       "reaction_used": false,
       "notes": "",
-      "speed": "30 ft., burrow 30 ft.",
-      "size_type_alignment": "Huge elemental, neutral",
-      "proficiency_bonus": 4,
+      "speed": "30 ft.",
+      "size_type_alignment": "Medium humanoid (cultist), chaotic neutral",
+      "proficiency_bonus": 2,
       "ability_scores": {
-        "STR": 24,
-        "DEX": 8,
-        "CON": 22,
-        "INT": 8,
-        "WIS": 13,
-        "CHA": 11
+        "STR": 10,
+        "DEX": 10,
+        "CON": 12,
+        "INT": 12,
+        "WIS": 14,
+        "CHA": 14
       },
       "ability_mods": {
-        "STR": 7,
-        "DEX": -1,
-        "CON": 6,
-        "INT": -1,
-        "WIS": 1,
-        "CHA": 0
+        "STR": 0,
+        "DEX": 0,
+        "CON": 1,
+        "INT": 1,
+        "WIS": 2,
+        "CHA": 2
       },
       "save_bonuses": {
-        "STR": 11,
-        "DEX": -1,
-        "CON": 10,
-        "INT": -1,
-        "WIS": 5,
-        "CHA": 0
+        "STR": 0,
+        "DEX": 0,
+        "CON": 1,
+        "INT": 1,
+        "WIS": 4,
+        "CHA": 4
       },
-      "resistances": "bludgeoning, piercing, slashing from nonmagical attacks",
-      "immunities": "poison",
-      "condition_immunities": "exhaustion, paralyzed, petrified, poisoned, unconscious",
-      "senses": "darkvision 60 ft., tremorsense 60 ft., passive Perception 11",
+      "resistances": "lightning, thunder (while portal Stage 2+)",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "passive Perception 10",
       "traits": [
         {
           "name": "Name",
           "desc": "Description"
         },
         {
-          "name": "Earth Glide",
-          "desc": "Korrum can burrow through nonmagical, unworked earth and stone without disturbing it."
+          "name": "Elemental Ward",
+          "desc": "While portal Stage 2+: advantage on elemental saves; resistance to all elemental damage."
         },
         {
-          "name": "Siege Monster",
-          "desc": "Korrum deals double damage to objects and structures."
+          "name": "Ritual Trance",
+          "desc": "Does not attack, cast spells, or make opportunity attacks. Disadvantage on Perception."
         },
         {
-          "name": "Elemental Command: Stone Pressure",
-          "desc": "While Korrum lives, each elemental flank deals +10 damage during flank resolution."
+          "name": "Bound to Air Focus",
+          "desc": "Connection persists until caster is stopped AND focus is stolen/disabled/dispelled/destroyed."
         },
         {
-          "name": "Legendary Resistance (1/day)",
-          "desc": "If Korrum fails a saving throw, it can choose to succeed instead."
+          "name": "Nonviolent Disruption",
+          "desc": "DC 16 Persuasion/Intimidation/Religion/Arcana; DC 15 Athletics; Dispel Magic DC 16; Silence/stun/paralysis/incapacitation."
+        },
+        {
+          "name": "Elemental Focus",
+          "desc": "AC 15, HP 20, Damage Threshold 5."
         }
       ],
       "actions": [
         {
           "name": "Name",
-          "desc": "Recharge / Uses"
+          "desc": "Description"
         },
         {
-          "name": "Multiattack",
-          "desc": "\u2014"
+          "name": "Continue Ritual",
+          "desc": "Maintains yellow/air connection to the elemental portal."
         },
         {
-          "name": "Grasping Earth",
-          "desc": "Recharge 5\u20136"
+          "name": "Cry Out",
+          "desc": "One nearby defender or elemental moves 10 ft. toward this anchor as a reaction."
         }
       ],
-      "bonus_actions": [
-        {
-          "name": "Name",
-          "desc": "Recharge / Uses"
-        },
-        {
-          "name": "Stone Spire",
-          "desc": "\u2014"
-        },
-        {
-          "name": "Stone Renewal",
-          "desc": "2x/day"
-        }
-      ],
-      "reactions": [
-        {
-          "name": "Name",
-          "desc": "Trigger"
-        },
-        {
-          "name": "Stone Backlash",
-          "desc": "Hit by a ranged or spell attack from a creature within 120 ft."
-        }
-      ],
+      "bonus_actions": [],
+      "reactions": [],
       "bloodied_effects": [
         {
           "name": "Name",
-          "desc": "Trigger"
+          "desc": "Description"
         },
         {
-          "name": "Shardfall",
-          "desc": "First reduced below \u00bd HP"
+          "name": "Violent Backlash \u2014 if killed or focus destroyed",
+          "desc": "1-2: Wind Detonation \u2014 20-ft radius, DC 16 STR, 8d6 force; pushed 20 ft. and prone on fail. 3-4: Air Birth \u2014 air elemental appears. 5-6: Air Rift \u2014 wind wall; ranged attacks through it at disadvantage; DC 16 STR to cross or pushed 15 ft."
         }
       ]
     },
-    "1dd76eb1": {
-      "id": "1dd76eb1",
-      "name": "Veyrath",
+    "19ccb314": {
+      "id": "19ccb314",
+      "name": "War Mage",
       "combatant_type": "NPC",
-      "source_tab": "Veyrath",
-      "initiative": 23,
-      "initiative_mod": 6,
-      "ac": 17,
-      "max_hp": 240,
+      "source_tab": "War Mage",
+      "initiative": 4,
+      "initiative_mod": 2,
+      "ac": 13,
+      "max_hp": 35,
       "temp_hp": 0,
       "conditions": [],
       "condition_notes": {},
@@ -398,77 +155,162 @@
           "effect": "Effect"
         },
         {
-          "name": "Burning Touch",
-          "attack_type": "Melee Weapon",
-          "to_hit": 10,
-          "reach": "5 ft.",
-          "damage_dice": [
-            {
-              "n": 2,
-              "die": 8,
-              "bonus": 6,
-              "damage_type": "fire"
-            }
-          ],
-          "save_dc": null,
-          "save_ability": "",
-          "effect": "Target ignites: until a creature uses an action to extinguish, it takes 1d8 fire at the start of each of its turns. This ongoing damage does not stack."
-        },
-        {
-          "name": "Ember Lance",
+          "name": "Fire Bolt",
           "attack_type": "Ranged Spell",
-          "to_hit": 10,
+          "to_hit": 7,
           "reach": "120 ft.",
           "damage_dice": [
             {
-              "n": 3,
-              "die": 8,
-              "bonus": 6,
+              "n": 2,
+              "die": 10,
+              "bonus": 0,
               "damage_type": "fire"
             }
           ],
           "save_dc": null,
           "save_ability": "",
-          "effect": "If the target is concentrating, the concentration save DC is at least 12."
+          "effect": "Cantrip"
+        },
+        {
+          "name": "Ray of Frost",
+          "attack_type": "Ranged Spell",
+          "to_hit": 7,
+          "reach": "60 ft.",
+          "damage_dice": [
+            {
+              "n": 1,
+              "die": 8,
+              "bonus": 0,
+              "damage_type": "cold"
+            }
+          ],
+          "save_dc": null,
+          "save_ability": "",
+          "effect": "Cantrip \u2014 slows 10 ft."
+        },
+        {
+          "name": "Magic Missile",
+          "attack_type": "Ranged Spell",
+          "to_hit": null,
+          "reach": "60 ft.",
+          "damage_dice": [
+            {
+              "n": 3,
+              "die": 4,
+              "bonus": 3,
+              "damage_type": "force"
+            }
+          ],
+          "save_dc": null,
+          "save_ability": "",
+          "effect": "1st level \u2014 auto-hit three darts"
+        },
+        {
+          "name": "Scorching Ray",
+          "attack_type": "Ranged Spell",
+          "to_hit": 7,
+          "reach": "120 ft.",
+          "damage_dice": [
+            {
+              "n": 2,
+              "die": 6,
+              "bonus": 0,
+              "damage_type": "fire"
+            }
+          ],
+          "save_dc": null,
+          "save_ability": "",
+          "effect": "2nd level \u2014 three rays"
+        },
+        {
+          "name": "Fireball",
+          "attack_type": "Ranged Spell",
+          "to_hit": null,
+          "reach": "150 ft.",
+          "damage_dice": [
+            {
+              "n": 8,
+              "die": 6,
+              "bonus": 0,
+              "damage_type": "fire"
+            }
+          ],
+          "save_dc": 15,
+          "save_ability": "DEX",
+          "effect": "3rd \u2014 20-ft radius; half on save"
+        },
+        {
+          "name": "Lightning Bolt",
+          "attack_type": "Ranged Spell",
+          "to_hit": null,
+          "reach": "100 ft.",
+          "damage_dice": [
+            {
+              "n": 8,
+              "die": 6,
+              "bonus": 0,
+              "damage_type": "lightning"
+            }
+          ],
+          "save_dc": 15,
+          "save_ability": "DEX",
+          "effect": "3rd \u2014 100-ft line; half on save"
+        },
+        {
+          "name": "Force Burst",
+          "attack_type": "Ranged Spell",
+          "to_hit": 7,
+          "reach": "60 ft.",
+          "damage_dice": [
+            {
+              "n": 4,
+              "die": 6,
+              "bonus": 0,
+              "damage_type": "force"
+            }
+          ],
+          "save_dc": 15,
+          "save_ability": "CON",
+          "effect": "Area force damage"
         }
       ],
       "limited_use": [],
       "is_group": false,
       "members": [],
       "initiative_mode": "Individual",
-      "attacks_per_round": 3,
+      "attacks_per_round": 1,
       "reaction_used": false,
       "notes": "",
-      "speed": "50 ft.",
-      "size_type_alignment": "Large elemental, neutral",
-      "proficiency_bonus": 4,
+      "speed": "30 ft.",
+      "size_type_alignment": "Medium humanoid (hobgoblin or elf), lawful neutral",
+      "proficiency_bonus": 2,
       "ability_scores": {
-        "STR": 12,
-        "DEX": 22,
-        "CON": 20,
-        "INT": 10,
+        "STR": 10,
+        "DEX": 14,
+        "CON": 14,
+        "INT": 18,
         "WIS": 14,
-        "CHA": 16
+        "CHA": 12
       },
       "ability_mods": {
-        "STR": 1,
-        "DEX": 6,
-        "CON": 5,
-        "INT": 0,
+        "STR": 0,
+        "DEX": 2,
+        "CON": 2,
+        "INT": 4,
         "WIS": 2,
-        "CHA": 3
+        "CHA": 1
       },
       "save_bonuses": {
-        "STR": 1,
-        "DEX": 10,
-        "CON": 9,
-        "INT": 0,
+        "STR": 0,
+        "DEX": 2,
+        "CON": 4,
+        "INT": 6,
         "WIS": 2,
-        "CHA": 7
+        "CHA": 1
       },
-      "resistances": "bludgeoning, piercing, slashing from nonmagical attacks",
-      "immunities": "fire, poison",
-      "condition_immunities": "exhaustion, grappled, paralyzed, petrified, poisoned, prone, restrained, unconscious",
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
       "senses": "darkvision 60 ft., passive Perception 12",
       "traits": [
         {
@@ -476,140 +318,55 @@
           "desc": "Description"
         },
         {
-          "name": "Fire Form",
-          "desc": "Veyrath can move through a space as narrow as 1 inch wide without squeezing. A creature that touches Veyrath or hits it with a melee attack while within 5 ft. takes 5 fire damage, no more than once per creature per round."
+          "name": "Controlled Casting",
+          "desc": "Advantage on concentration saves. Not disrupted by hits under 10 damage."
         },
         {
-          "name": "Illumination",
-          "desc": "Veyrath sheds bright light in a 30-ft. radius and dim light for another 30 ft."
+          "name": "Battlefield Focus",
+          "desc": "Advantage on CON saves to maintain concentration."
         },
         {
-          "name": "Elemental Command: Flame Pressure",
-          "desc": "While Veyrath lives, each hobgoblin flank takes +10 fire attrition during flank resolution."
+          "name": "Spellcasting \u2014 Wizard ~7-9",
+          "desc": "Spell attack +7. Save DC 15. INT-based. Slots: 1st x4, 2nd x3, 3rd x3, 4th x1-2. Cantrips: Fire Bolt, Ray of Frost, Shocking Grasp, Minor Illusion. 1st: Mage Armor (pre-cast), Shield (reaction), Magic Missile, Fog Cloud. 2nd: Mirror Image, Misty Step, Web, Scorching Ray. 3rd: Fireball, Lightning Bolt, Haste. 4th: Wall of Fire, Greater Invisibility."
         },
         {
-          "name": "Legendary Resistance (1/day)",
-          "desc": "If Veyrath fails a saving throw, it can choose to succeed instead."
+          "name": "Tactics",
+          "desc": "Stays behind front line. Pre-casts Mage Armor (AC becomes 16). Casts Haste on key melee allies. Break: retreats via Misty Step if threatened in melee. HIGH VALUE TARGET."
         }
       ],
       "actions": [
         {
           "name": "Name",
-          "desc": "Recharge / Uses"
+          "desc": "Description"
         },
         {
-          "name": "Multiattack",
-          "desc": "\u2014"
+          "name": "Control Field",
+          "desc": "Web (DC 15 STR, restrained) or difficult terrain effect in 30-40 ft. area."
         },
         {
-          "name": "Thermal Updraft",
-          "desc": "Recharge 4\u20136"
-        },
-        {
-          "name": "Cinder Swarm",
-          "desc": "Recharge 5\u20136"
+          "name": "Buff Ally",
+          "desc": "Haste on one ally: doubled speed, +2 AC, adv DEX saves, extra Attack. Concentration 1 min."
         }
       ],
-      "bonus_actions": [
-        {
-          "name": "Name",
-          "desc": "Recharge / Uses"
-        },
-        {
-          "name": "Flame Renewal",
-          "desc": "2x/day"
-        }
-      ],
+      "bonus_actions": [],
       "reactions": [
         {
           "name": "Name",
-          "desc": "Trigger"
+          "desc": "Description"
         },
         {
-          "name": "Flare Back",
-          "desc": "Hit by a ranged or spell attack from within 120 ft."
+          "name": "Shield",
+          "desc": "When hit by attack or Magic Missile: +5 AC until start of next turn. Uses 1st-level slot."
         }
       ],
-      "bloodied_effects": [
-        {
-          "name": "Name",
-          "desc": "Trigger"
-        },
-        {
-          "name": "Crownflame Eruption",
-          "desc": "First reduced below \u00bd HP"
-        }
-      ]
-    },
-    "55736068": {
-      "id": "55736068",
-      "name": "Wisp Pack",
-      "combatant_type": "NPC",
-      "source_tab": null,
-      "initiative": 17,
-      "initiative_mod": 0,
-      "ac": null,
-      "max_hp": 10,
-      "temp_hp": 0,
-      "conditions": [],
-      "condition_notes": {},
-      "concentration": null,
-      "status_override": null,
-      "attacks": [],
-      "limited_use": [],
-      "is_group": true,
-      "members": [
-        {
-          "id": "f23bceaa",
-          "name": "Flame Wisp 1",
-          "max_hp": 10,
-          "conditions": [],
-          "can_attack": true,
-          "status_override": null
-        },
-        {
-          "id": "ae006d02",
-          "name": "Flame Wisp 2",
-          "max_hp": 10,
-          "conditions": [],
-          "can_attack": true,
-          "status_override": null
-        },
-        {
-          "id": "ac1bb26a",
-          "name": "Flame Wisp 3",
-          "max_hp": 10,
-          "conditions": [],
-          "can_attack": true,
-          "status_override": null
-        }
-      ],
-      "initiative_mode": "Grouped Attacks",
-      "attacks_per_round": 1,
-      "reaction_used": false,
-      "notes": "Summoned by Veyrath (no stat tab; uses HP override)",
-      "speed": "",
-      "size_type_alignment": "",
-      "proficiency_bonus": 0,
-      "ability_scores": {},
-      "ability_mods": {},
-      "save_bonuses": {},
-      "resistances": "",
-      "immunities": "",
-      "condition_immunities": "",
-      "senses": "",
-      "traits": [],
-      "actions": [],
-      "bonus_actions": [],
-      "reactions": [],
       "bloodied_effects": []
     },
-    "bc8df6b2": {
-      "id": "bc8df6b2",
-      "name": "red boots",
+    "4e2d36b5": {
+      "id": "4e2d36b5",
+      "name": "red booties",
       "combatant_type": "NPC",
       "source_tab": "Hobgoblin",
-      "initiative": 9,
+      "initiative": 18,
       "initiative_mod": 1,
       "ac": 18,
       "max_hp": 11,
@@ -651,7 +408,7 @@
       "is_group": true,
       "members": [
         {
-          "id": "7713370c",
+          "id": "237e4b09",
           "name": "Hobgoblin 1",
           "max_hp": 11,
           "conditions": [],
@@ -659,7 +416,7 @@
           "status_override": null
         },
         {
-          "id": "22c02955",
+          "id": "3fded6eb",
           "name": "Hobgoblin 2",
           "max_hp": 11,
           "conditions": [],
@@ -667,7 +424,7 @@
           "status_override": null
         },
         {
-          "id": "1c626f3a",
+          "id": "25e15af5",
           "name": "Hobgoblin 3",
           "max_hp": 11,
           "conditions": [],
@@ -675,7 +432,7 @@
           "status_override": null
         },
         {
-          "id": "c91fa29e",
+          "id": "4387f0b3",
           "name": "Hobgoblin 4",
           "max_hp": 11,
           "conditions": [],
@@ -683,15 +440,39 @@
           "status_override": null
         },
         {
-          "id": "bb652ec8",
+          "id": "1151a39c",
           "name": "Hobgoblin 5",
+          "max_hp": 11,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "3f8e1ecd",
+          "name": "Hobgoblin 6",
+          "max_hp": 11,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "80fb93ea",
+          "name": "Hobgoblin 7",
+          "max_hp": 11,
+          "conditions": [],
+          "can_attack": true,
+          "status_override": null
+        },
+        {
+          "id": "bb891b8a",
+          "name": "Hobgoblin 8",
           "max_hp": 11,
           "conditions": [],
           "can_attack": true,
           "status_override": null
         }
       ],
-      "initiative_mode": "Individual",
+      "initiative_mode": "Grouped Attacks",
       "attacks_per_round": 1,
       "reaction_used": false,
       "notes": "",
@@ -740,9 +521,620 @@
       "bonus_actions": [],
       "reactions": [],
       "bloodied_effects": []
+    },
+    "32ec9a9b": {
+      "id": "32ec9a9b",
+      "name": "Rex",
+      "combatant_type": "PC",
+      "source_tab": null,
+      "initiative": 16,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    },
+    "2d0acfcd": {
+      "id": "2d0acfcd",
+      "name": "Prag",
+      "combatant_type": "PC",
+      "source_tab": null,
+      "initiative": 17,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    },
+    "10c43142": {
+      "id": "10c43142",
+      "name": "Roquist",
+      "combatant_type": "PC",
+      "source_tab": null,
+      "initiative": 8,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    },
+    "fc097ae1": {
+      "id": "fc097ae1",
+      "name": "Giggles",
+      "combatant_type": "PC",
+      "source_tab": null,
+      "initiative": 1,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
+    },
+    "23f6bd98": {
+      "id": "23f6bd98",
+      "name": "Shaddow",
+      "combatant_type": "PC",
+      "source_tab": null,
+      "initiative": 10,
+      "initiative_mod": 0,
+      "ac": null,
+      "max_hp": null,
+      "temp_hp": 0,
+      "conditions": [],
+      "condition_notes": {},
+      "concentration": null,
+      "status_override": null,
+      "attacks": [],
+      "limited_use": [],
+      "is_group": false,
+      "members": [],
+      "initiative_mode": "Individual",
+      "attacks_per_round": 1,
+      "reaction_used": false,
+      "notes": "",
+      "speed": "",
+      "size_type_alignment": "",
+      "proficiency_bonus": 0,
+      "ability_scores": {},
+      "ability_mods": {},
+      "save_bonuses": {},
+      "resistances": "",
+      "immunities": "",
+      "condition_immunities": "",
+      "senses": "",
+      "traits": [],
+      "actions": [],
+      "bonus_actions": [],
+      "reactions": [],
+      "bloodied_effects": []
     }
   },
-  "log": [],
+  "log": [
+    {
+      "id": "51426457",
+      "round": 1,
+      "turn": 0,
+      "source": "red booties",
+      "target": "Giggles",
+      "target_id": "fc097ae1",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 25,
+      "damage_type": "",
+      "attack_name": "Longsword",
+      "notes": "",
+      "ts": "2026-06-28T02:48:15.119630+00:00"
+    },
+    {
+      "id": "0d6599ad",
+      "round": 1,
+      "turn": 1,
+      "source": "Prag",
+      "target": "Giggles",
+      "target_id": "fc097ae1",
+      "member_id": null,
+      "event_type": "heal",
+      "amount": 12,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:48:40.843395+00:00"
+    },
+    {
+      "id": "02b53ec1",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 1",
+      "target_id": "4e2d36b5",
+      "member_id": "237e4b09",
+      "event_type": "damage",
+      "amount": 11,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:49:08.238067+00:00"
+    },
+    {
+      "id": "bafa78b9",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 2",
+      "target_id": "4e2d36b5",
+      "member_id": "3fded6eb",
+      "event_type": "damage",
+      "amount": 11,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:49:08.238067+00:00"
+    },
+    {
+      "id": "b42a5acc",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 3",
+      "target_id": "4e2d36b5",
+      "member_id": "25e15af5",
+      "event_type": "damage",
+      "amount": 1,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:49:08.238067+00:00"
+    },
+    {
+      "id": "120dca1f",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 1",
+      "target_id": "4e2d36b5",
+      "member_id": "237e4b09",
+      "event_type": "damage",
+      "amount": 25,
+      "damage_type": "slashing",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:51:28.653088+00:00"
+    },
+    {
+      "id": "0b4f263c",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 2",
+      "target_id": "4e2d36b5",
+      "member_id": "3fded6eb",
+      "event_type": "damage",
+      "amount": 25,
+      "damage_type": "slashing",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:51:28.653088+00:00"
+    },
+    {
+      "id": "406d4793",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 3",
+      "target_id": "4e2d36b5",
+      "member_id": "25e15af5",
+      "event_type": "damage",
+      "amount": 25,
+      "damage_type": "slashing",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:51:28.653088+00:00"
+    },
+    {
+      "id": "77c93e91",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 4",
+      "target_id": "4e2d36b5",
+      "member_id": "4387f0b3",
+      "event_type": "damage",
+      "amount": 25,
+      "damage_type": "slashing",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:51:28.653088+00:00"
+    },
+    {
+      "id": "ca12bdfa",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 5",
+      "target_id": "4e2d36b5",
+      "member_id": "1151a39c",
+      "event_type": "damage",
+      "amount": 25,
+      "damage_type": "slashing",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:51:28.653088+00:00"
+    },
+    {
+      "id": "d341dbe6",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 6",
+      "target_id": "4e2d36b5",
+      "member_id": "3f8e1ecd",
+      "event_type": "damage",
+      "amount": 25,
+      "damage_type": "slashing",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:51:28.653088+00:00"
+    },
+    {
+      "id": "666c551d",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 7",
+      "target_id": "4e2d36b5",
+      "member_id": "80fb93ea",
+      "event_type": "damage",
+      "amount": 25,
+      "damage_type": "slashing",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:51:28.653088+00:00"
+    },
+    {
+      "id": "108602ea",
+      "round": 1,
+      "turn": 2,
+      "source": "Rex",
+      "target": "Hobgoblin 8",
+      "target_id": "4e2d36b5",
+      "member_id": "bb891b8a",
+      "event_type": "damage",
+      "amount": 25,
+      "damage_type": "slashing",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:51:28.653088+00:00"
+    },
+    {
+      "id": "12dcba8c",
+      "round": 1,
+      "turn": 3,
+      "source": "Shaddow",
+      "target": "Air Anchor Caster",
+      "target_id": "cb1f24a7",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 45,
+      "damage_type": "Bludgeoning",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:52:49.447411+00:00"
+    },
+    {
+      "id": "e85f323e",
+      "round": 1,
+      "turn": 4,
+      "source": "Roquist",
+      "target": "Air Anchor Caster",
+      "target_id": "cb1f24a7",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 17,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:53:24.077849+00:00"
+    },
+    {
+      "id": "171ea182",
+      "round": 1,
+      "turn": 5,
+      "source": "Shaddow",
+      "target": "War Mage",
+      "target_id": "19ccb314",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 34,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:53:47.612238+00:00"
+    },
+    {
+      "id": "3d4a0ce9",
+      "round": 1,
+      "turn": 6,
+      "source": "Giggles",
+      "target": "War Mage",
+      "target_id": "19ccb314",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 12,
+      "damage_type": "lightning",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:54:52.957595+00:00"
+    },
+    {
+      "id": "26a5d2b8",
+      "round": 1,
+      "turn": 6,
+      "source": "Giggles",
+      "target": "Air Anchor Caster",
+      "target_id": "cb1f24a7",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 3,
+      "damage_type": "lightning",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:54:52.957595+00:00"
+    },
+    {
+      "id": "f8d6c87b",
+      "round": 1,
+      "turn": 7,
+      "source": "Air Anchor Caster",
+      "target": "Roquist",
+      "target_id": "10c43142",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 45,
+      "damage_type": "lightning",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:56:00.800815+00:00"
+    },
+    {
+      "id": "00092761",
+      "round": 1,
+      "turn": 7,
+      "source": "Air Anchor Caster",
+      "target": "Shaddow",
+      "target_id": "23f6bd98",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 45,
+      "damage_type": "lightning",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:56:00.801342+00:00"
+    },
+    {
+      "id": "e9ecbf3e",
+      "round": 1,
+      "turn": 7,
+      "source": "Air Anchor Caster",
+      "target": "Prag",
+      "target_id": "2d0acfcd",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 45,
+      "damage_type": "lightning",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:56:00.801342+00:00"
+    },
+    {
+      "id": "1750dfac",
+      "round": 1,
+      "turn": 7,
+      "source": "Air Anchor Caster",
+      "target": "Rex",
+      "target_id": "32ec9a9b",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 45,
+      "damage_type": "lightning",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:56:00.801342+00:00"
+    },
+    {
+      "id": "3bf843fc",
+      "round": 1,
+      "turn": 7,
+      "source": "Air Anchor Caster",
+      "target": "Giggles",
+      "target_id": "fc097ae1",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 45,
+      "damage_type": "lightning",
+      "attack_name": "AoE Spell",
+      "notes": "",
+      "ts": "2026-06-28T02:56:00.801342+00:00"
+    },
+    {
+      "id": "d50578e5",
+      "round": 2,
+      "turn": 1,
+      "source": "Prag",
+      "target": "Prag",
+      "target_id": "2d0acfcd",
+      "member_id": null,
+      "event_type": "heal",
+      "amount": 20,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:57:11.382122+00:00"
+    },
+    {
+      "id": "fa19b999",
+      "round": 2,
+      "turn": 1,
+      "source": "Prag",
+      "target": "Roquist",
+      "target_id": "10c43142",
+      "member_id": null,
+      "event_type": "heal",
+      "amount": 20,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:57:11.382122+00:00"
+    },
+    {
+      "id": "b4834007",
+      "round": 2,
+      "turn": 1,
+      "source": "Prag",
+      "target": "Rex",
+      "target_id": "32ec9a9b",
+      "member_id": null,
+      "event_type": "heal",
+      "amount": 20,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:57:11.382122+00:00"
+    },
+    {
+      "id": "05b80b5a",
+      "round": 2,
+      "turn": 1,
+      "source": "Prag",
+      "target": "Giggles",
+      "target_id": "fc097ae1",
+      "member_id": null,
+      "event_type": "heal",
+      "amount": 20,
+      "damage_type": "",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T02:57:11.382122+00:00"
+    },
+    {
+      "id": "533b376f",
+      "round": 2,
+      "turn": 3,
+      "source": "Shaddow",
+      "target": "Air Anchor Caster",
+      "target_id": "cb1f24a7",
+      "member_id": null,
+      "event_type": "damage",
+      "amount": 23,
+      "damage_type": "Bludgeoning",
+      "attack_name": "",
+      "notes": "",
+      "ts": "2026-06-28T03:40:00.643786+00:00"
+    }
+  ],
   "source_path": "C:\\Users\\jfwal\\OneDrive\\dnd - elemental crown\\battle tracker\\combat tracker.xlsx",
   "started": true
 }

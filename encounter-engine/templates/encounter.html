@@ -294,16 +294,24 @@ function renderCombatants() {
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
+// Effective max HP for the bar/label. For a group, max_hp is PER MEMBER, so the
+// group's total max is max_hp × member count (matches the summed current_hp).
+function effectiveMaxHp(c) {
+  if (c.is_group) return (c.max_hp ?? 0) * (c.members?.length || 0);
+  return c.max_hp ?? 0;
+}
 function hpBarClass(c) {
-  if (!c.max_hp) return 'hp-bar-none';
-  const pct = (c.current_hp ?? 0) / c.max_hp;
+  const max = effectiveMaxHp(c);
+  if (!max) return 'hp-bar-none';
+  const pct = (c.current_hp ?? 0) / max;
   if (pct > 0.5) return 'hp-green';
   if (pct > 0) return 'hp-yellow';
   return 'hp-red';
 }
 function hpBarWidth(c) {
-  if (!c.max_hp || c.max_hp === 0) return 0;
-  return Math.max(0, Math.min(100, ((c.current_hp ?? 0) / c.max_hp) * 100));
+  const max = effectiveMaxHp(c);
+  if (!max) return 0;
+  return Math.max(0, Math.min(100, ((c.current_hp ?? 0) / max) * 100));
 }
 function statusPill(status) {
   return `<span class="status-pill status-${(status||'active').toLowerCase()}">${status||'Active'}</span>`;
@@ -606,7 +614,7 @@ function renderGroupCard(c, isCurrent) {
     <div class="hp-bar-track">
       <div class="hp-bar-fill ${hpClass}" style="width:${hpPct}%"></div>
     </div>
-    <span class="hp-label">${c.current_hp ?? '—'} / ${(c.max_hp ?? 0) * (c.members||[]).length} HP</span>
+    <span class="hp-label">${c.current_hp ?? '—'} / ${effectiveMaxHp(c)} HP</span>
   </div>
 
   <div class="attacks-row">

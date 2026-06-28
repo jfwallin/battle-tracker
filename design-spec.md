@@ -1,3 +1,9 @@
+# Encounter Engine — v1 Spec (historical)
+
+> **Historical v1 spec.** This is the original aspirational specification. For how the app
+> actually works today (current features, data model, REST API, and operational notes), see
+> the living design doc at `encounter-engine/DESIGN.md`.
+
 SPEC — "Encounter Engine": A DM Combat Tracker (Flask + HTML)
 1. Purpose
 A local web app that runs a D&D 5e combat encounter from an existing Excel workbook. It replaces a formula-based spreadsheet tracker that can't roll dice on click, can't apply attacks to targets, and requires too much manual turn/round entry. The app must read the existing Excel format as its source of truth for setup, then provide a fast, click-driven combat interface with automatic turn/round advancement, dice rolling, and damage application.

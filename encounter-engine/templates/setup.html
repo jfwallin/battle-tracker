@@ -18,12 +18,113 @@
   </div>
   {% endif %}
 
+  <!-- Workspace: a folder of standard files, remembered between sessions -->
+  <div class="card" id="workspace-section">
+    <h2>Workspace</h2>
+    <p>Point the app at a folder holding <strong>Combat Tracker.xlsx</strong> and (optionally)
+       <strong>Battle_Library.xlsx</strong> / <strong>Game_Data.xlsx</strong>. It's remembered for next time.</p>
+    <div class="field-row">
+      <label for="workspace-dir">Workspace folder</label>
+      <input type="text" id="workspace-dir" class="path-input" value="{{ workspace_dir }}"
+             placeholder="C:\path\to\Encounter_Data">
+      <button class="btn btn-secondary" onclick="setWorkspace()">Set Workspace</button>
+    </div>
+    <div id="workspace-messages" class="workspace-messages">
+      {% for m in workspace_messages %}
+        <div class="workspace-msg {{ 'msg-warn' if 'not found' in m else 'msg-ok' }}">{{ m }}</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Prepared battles from Battle_Library.xlsx -->
+  <div class="card" id="battle-section" {% if not combat_tracker_path %}style="display:none"{% endif %}>
+    <div class="section-head">
+      <h2>Prepared Battles</h2>
+      <button class="btn btn-primary btn-sm" onclick="newBattle()">+ New Battle</button>
+    </div>
+    <div id="battle-list"><p class="muted">{% if battle_library_found %}Loading battles…{% else %}No prepared battles yet — create one with “New Battle”.{% endif %}</p></div>
+
+    <!-- Battle builder (Stage 2) -->
+    <div id="builder-panel" class="builder-panel" style="display:none">
+      <h3 id="builder-title">New Battle</h3>
+      <div class="field-row">
+        <label for="b-name">Name</label>
+        <input type="text" id="b-name" class="path-input" placeholder="e.g. Goblin Ambush">
+      </div>
+      <div class="field-row">
+        <label for="b-status">Status</label>
+        <select id="b-status">
+          <option>Draft</option><option>Ready</option><option>Test</option><option>Archived</option>
+        </select>
+        <label for="b-tags" style="min-width:auto">Tags</label>
+        <input type="text" id="b-tags" class="path-input" placeholder="comma, separated">
+      </div>
+      <div class="field-row">
+        <label for="b-notes">Notes</label>
+        <input type="text" id="b-notes" class="path-input" placeholder="DM-facing description">
+      </div>
+
+      <h4>Add from Combat Tracker</h4>
+      <input type="text" id="source-search" class="path-input" placeholder="search creatures…" oninput="renderSources()">
+      <div id="source-list" class="source-list"></div>
+      <div class="field-row" style="margin-top:6px">
+        <span class="muted">Or add a non-creature row:</span>
+        <button class="btn btn-ghost btn-xs" onclick="addRow('PC')">+ PC</button>
+        <button class="btn btn-ghost btn-xs" onclick="addRow('Hazard')">+ Hazard</button>
+        <button class="btn btn-ghost btn-xs" onclick="addRow('Event')">+ Event</button>
+      </div>
+
+      <h4>Roster</h4>
+      <div id="builder-rows"></div>
+
+      <div class="field-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="saveBattle()">Save Battle</button>
+        <button class="btn btn-ghost" onclick="closeBuilder()">Cancel</button>
+        <span id="builder-error" class="error-msg" style="display:none"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Party profiles (Game_Data.xlsx) -->
+  <div class="card" id="party-section" {% if not combat_tracker_path %}style="display:none"{% endif %}>
+    <div class="section-head">
+      <h2>Party Profiles</h2>
+      <button class="btn btn-primary btn-sm" onclick="newPartyProfile()">+ New Profile</button>
+    </div>
+    <p class="muted">Reusable party rosters. Attach one when loading a battle so battles can stay enemies-only.</p>
+    <div id="party-list"></div>
+
+    <div id="profile-panel" class="builder-panel" style="display:none">
+      <h3 id="profile-title">New Party Profile</h3>
+      <div class="field-row">
+        <label for="p-id">Profile ID</label>
+        <input type="text" id="p-id" class="path-input" placeholder="e.g. PARTY-MAIN">
+      </div>
+      <h4>Members</h4>
+      <div id="profile-rows"></div>
+      <div class="field-row" style="margin-top:6px">
+        <button class="btn btn-ghost btn-xs" onclick="addMember()">+ Member</button>
+      </div>
+      <div class="field-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="savePartyProfile()">Save Profile</button>
+        <button class="btn btn-ghost" onclick="closeProfile()">Cancel</button>
+        <span id="profile-error" class="error-msg" style="display:none"></span>
+      </div>
+    </div>
+  </div>
+
   <div class="card" id="load-section" {% if has_saved %}style="display:none"{% endif %}>
-    <h2>Load Excel Workbook</h2>
-    <p>Select your encounter workbook. The <strong>Battle List</strong> sheet defines the roster; each NPC Source tab provides stats.</p>
+    <h2>Load Single Workbook</h2>
+    <p>Select an encounter workbook directly. The <strong>Battle List</strong> sheet defines the roster; each NPC Source tab provides stats.</p>
+    {% if combat_tracker_path %}
+    <div class="field-row">
+      <button class="btn btn-ghost btn-sm" onclick="loadDiscoveredTracker()">Load Battle List from workspace Combat Tracker</button>
+    </div>
+    {% endif %}
     <div class="field-row">
       <label for="excel-path">Workbook path</label>
-      <input type="text" id="excel-path" placeholder="C:\path\to\combat tracker.xlsx" class="path-input">
+      <input type="text" id="excel-path" placeholder="C:\path\to\combat tracker.xlsx" class="path-input"
+             data-tracker="{{ combat_tracker_path }}">
       <button class="btn btn-secondary" onclick="browseFile()">Browse</button>
     </div>
     <div id="load-error" class="error-msg" style="display:none"></div>
@@ -56,6 +157,345 @@
 {% block extra_js %}
 <script>
 let _enc = null;
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escJs(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+// ── Workspace + prepared battles ────────────────────────────────────────────────
+async function setWorkspace() {
+  const dir = document.getElementById('workspace-dir').value.trim();
+  const r = await fetch('/api/workspace/set', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ dir })
+  });
+  const data = await r.json();
+  const box = document.getElementById('workspace-messages');
+  if (!data.ok) {
+    box.innerHTML = `<div class="workspace-msg msg-warn">${escHtml(data.error||'Failed')}</div>`;
+    return;
+  }
+  renderWorkspaceMessages(data.discovery.messages);
+  const libFound = data.discovery.files.battle_library.found;
+  document.getElementById('battle-section').style.display = libFound ? 'block' : 'none';
+  if (libFound) loadBattles();
+}
+
+function renderWorkspaceMessages(messages) {
+  document.getElementById('workspace-messages').innerHTML = (messages||[]).map(m =>
+    `<div class="workspace-msg ${/not found/i.test(m) ? 'msg-warn' : 'msg-ok'}">${escHtml(m)}</div>`
+  ).join('');
+}
+
+async function loadBattles() {
+  await loadPartyProfiles();   // populate _profiles so the per-battle party picker is ready
+  const list = document.getElementById('battle-list');
+  list.innerHTML = '<p class="muted">Loading battles…</p>';
+  const data = await (await fetch('/api/battles')).json();
+  if (!data.ok) {
+    list.innerHTML = `<div class="error-msg">${escHtml(data.error || 'Could not load battles')}</div>`;
+    return;
+  }
+  renderBattles(data.battles);
+}
+
+// Party <select> options for a battle card (default / none / each profile).
+function partyOptions(defaultProfile) {
+  const def = defaultProfile || '';
+  let html = `<option value="__default__">battle default${def ? ' (' + escHtml(def) + ')' : ' (none)'}</option>`;
+  html += `<option value="">none</option>`;
+  html += _profiles.map(p => `<option value="${escJs(p.id)}">${escHtml(p.id)} (${p.count})</option>`).join('');
+  return html;
+}
+
+function renderBattles(battles) {
+  const list = document.getElementById('battle-list');
+  if (!battles.length) { list.innerHTML = '<p class="muted">No battles in the library yet.</p>'; return; }
+  list.innerHTML = battles.map(b => {
+    const c = b.counts || {};
+    const counts = `${c.npcs||0} NPC · ${c.groups||0} group · ${c.pcs||0} PC · ${c.allies||0} ally · ${c.hazards||0} hazard · ${c.events||0} event`;
+    const tags = (b.tags||[]).map(t => `<span class="tag-chip">${escHtml(t)}</span>`).join(' ');
+    const warns = (b.warnings||[]).length
+      ? `<div class="battle-warns">${b.warnings.map(w => '⚠ ' + escHtml(w)).join('<br>')}</div>` : '';
+    return `<div class="battle-card">
+      <div class="battle-head">
+        <strong>${escHtml(b.name)}</strong>
+        ${b.status ? `<span class="status-chip">${escHtml(b.status)}</span>` : ''}
+        ${tags}
+      </div>
+      ${b.notes ? `<div class="battle-notes">${escHtml(b.notes)}</div>` : ''}
+      <div class="battle-counts">${counts}</div>
+      ${warns}
+      <div class="battle-actions">
+        <button class="btn btn-primary btn-sm" onclick="loadBattle('${escJs(b.id)}')">Load Battle ▶</button>
+        <label class="party-pick">Party:
+          <select id="party-sel-${b.id}">${partyOptions(b.default_party_profile)}</select>
+        </label>
+        <button class="btn btn-ghost btn-sm" onclick="editBattle('${escJs(b.id)}')">Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="duplicateBattle('${escJs(b.id)}')">Duplicate</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteBattle('${escJs(b.id)}','${escJs(b.name)}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadBattle(id) {
+  const sel = document.getElementById('party-sel-' + id);
+  const party = sel ? sel.value : '__default__';
+  const data = await (await fetch(`/api/battles/${encodeURIComponent(id)}/load`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ party_profile: party })
+  })).json();
+  if (!data.ok) { alert(data.error || 'Could not load battle'); return; }
+  _enc = data.encounter;
+  renderRoster();
+  const rs = document.getElementById('roster-section');
+  rs.style.display = 'block';
+  rs.scrollIntoView({ behavior: 'smooth' });
+}
+
+function loadDiscoveredTracker() {
+  const el = document.getElementById('excel-path');
+  el.value = el.dataset.tracker || '';
+  loadExcel();
+}
+
+// ── Battle builder ──────────────────────────────────────────────────────────────
+const TYPES = ['PC','NPC','Ally','Hazard','Event'];
+const INIT_MODES = ['Individual','Shared','Grouped Attacks','Mob'];
+let _builder = { id: null, definition_location: '', rows: [], sources: [], loaded: false };
+
+async function ensureSources() {
+  if (_builder.loaded) return;
+  const data = await (await fetch('/api/sources')).json();
+  _builder.sources = data.ok ? data.sources : [];
+  _builder.loaded = true;
+}
+
+function newBattle() {
+  openBuilder({ id: null, name: '', status: 'Draft', tags: [], notes: '',
+                definition_location: '', rows: [] });
+}
+
+async function editBattle(id) {
+  const data = await (await fetch(`/api/battles/${encodeURIComponent(id)}/definition`)).json();
+  if (!data.ok) { alert(data.error || 'Could not open battle'); return; }
+  openBuilder(data.battle);
+}
+
+async function openBuilder(b) {
+  _builder.id = b.id || null;
+  _builder.definition_location = b.definition_location || '';
+  _builder.rows = (b.rows || []).map(r => ({...r}));
+  document.getElementById('builder-title').textContent = b.id ? `Edit: ${b.name}` : 'New Battle';
+  document.getElementById('b-name').value = b.name || '';
+  document.getElementById('b-status').value = b.status || 'Draft';
+  document.getElementById('b-tags').value = (b.tags || []).join(', ');
+  document.getElementById('b-notes').value = b.notes || '';
+  document.getElementById('builder-error').style.display = 'none';
+  document.getElementById('source-search').value = '';
+  await ensureSources();
+  renderSources();
+  renderBuilderRows();
+  const panel = document.getElementById('builder-panel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeBuilder() {
+  document.getElementById('builder-panel').style.display = 'none';
+}
+
+function renderSources() {
+  const q = (document.getElementById('source-search').value || '').toLowerCase();
+  const list = document.getElementById('source-list');
+  const items = _builder.sources.filter(s =>
+    s.name.toLowerCase().includes(q) || (s.tab||'').toLowerCase().includes(q));
+  if (!items.length) { list.innerHTML = '<p class="muted">No matching creatures.</p>'; return; }
+  list.innerHTML = items.map(s =>
+    `<button class="source-chip" onclick="addSource('${escJs(s.tab)}','${escJs(s.name)}')">
+       ${escHtml(s.name)} <span class="src-stat">AC ${s.ac ?? '—'} · ${s.max_hp ?? '—'} HP</span>
+     </button>`).join('');
+}
+
+function addSource(tab, name) {
+  _builder.rows.push({ type: 'NPC', name, npc_source: tab, quantity: 1,
+                       group_name: '', initiative_mode: 'Individual',
+                       hp_override: '', notes: '', starting_status: '' });
+  renderBuilderRows();
+}
+
+function addRow(type) {
+  _builder.rows.push({ type, name: '', npc_source: '', quantity: 1, group_name: '',
+                       initiative_mode: 'Individual', hp_override: '', notes: '', starting_status: '' });
+  renderBuilderRows();
+}
+
+function removeRow(i) { _builder.rows.splice(i, 1); renderBuilderRows(); }
+function setRowField(i, field, val) { _builder.rows[i][field] = val; }
+
+function renderBuilderRows() {
+  const el = document.getElementById('builder-rows');
+  if (!_builder.rows.length) { el.innerHTML = '<p class="muted">No participants yet. Add creatures above.</p>'; return; }
+  const sel = (i, field, opts, cur) =>
+    `<select onchange="setRowField(${i},'${field}',this.value)">` +
+    opts.map(o => `<option ${o===cur?'selected':''}>${o}</option>`).join('') + `</select>`;
+  const inp = (i, field, cur, ph, w) =>
+    `<input type="text" value="${escHtml(cur ?? '')}" placeholder="${ph}" style="width:${w}"
+       oninput="setRowField(${i},'${field}',this.value)">`;
+  let html = `<table class="builder-table"><thead><tr>
+    <th>Type</th><th>Name</th><th>Source</th><th>Qty</th><th>Group</th><th>Init</th><th>HP ovr</th><th>Status</th><th>Notes</th><th></th>
+    </tr></thead><tbody>`;
+  html += _builder.rows.map((r, i) => `<tr>
+    <td>${sel(i,'type',TYPES,r.type||'NPC')}</td>
+    <td>${inp(i,'name',r.name,'name','90px')}</td>
+    <td>${inp(i,'npc_source',r.npc_source,'tab','90px')}</td>
+    <td><input type="number" min="1" value="${r.quantity ?? 1}" style="width:46px" oninput="setRowField(${i},'quantity',this.value)"></td>
+    <td>${inp(i,'group_name',r.group_name,'group','80px')}</td>
+    <td>${sel(i,'initiative_mode',INIT_MODES,r.initiative_mode||'Individual')}</td>
+    <td>${inp(i,'hp_override',r.hp_override,'','46px')}</td>
+    <td>${inp(i,'starting_status',r.starting_status,'','70px')}</td>
+    <td>${inp(i,'notes',r.notes,'','120px')}</td>
+    <td><button class="btn btn-ghost btn-xs" onclick="removeRow(${i})">✕</button></td>
+  </tr>`).join('');
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function saveBattle() {
+  const err = document.getElementById('builder-error');
+  err.style.display = 'none';
+  const name = document.getElementById('b-name').value.trim();
+  if (!name) { err.textContent = 'Battle name is required.'; err.style.display = 'inline'; return; }
+  const payload = {
+    id: _builder.id || undefined,
+    definition_location: _builder.definition_location || undefined,
+    name,
+    status: document.getElementById('b-status').value,
+    tags: document.getElementById('b-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+    notes: document.getElementById('b-notes').value.trim(),
+    rows: _builder.rows,
+  };
+  const data = await (await fetch('/api/battles/save', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  })).json();
+  if (!data.ok) { err.textContent = data.error || 'Save failed'; err.style.display = 'inline'; return; }
+  closeBuilder();
+  loadBattles();
+}
+
+async function duplicateBattle(id) {
+  const data = await (await fetch(`/api/battles/${encodeURIComponent(id)}/duplicate`, { method: 'POST' })).json();
+  if (!data.ok) { alert(data.error || 'Duplicate failed'); return; }
+  loadBattles();
+}
+
+async function deleteBattle(id, name) {
+  if (!confirm(`Delete battle “${name}”? This removes it from Battle_Library.xlsx.`)) return;
+  const data = await (await fetch(`/api/battles/${encodeURIComponent(id)}`, { method: 'DELETE' })).json();
+  if (!data.ok) { alert(data.error || 'Delete failed'); return; }
+  loadBattles();
+}
+
+// ── Party profiles ──────────────────────────────────────────────────────────────
+const PARTY_TYPES = ['PC','Ally','Companion','Familiar','NPC'];
+let _profiles = [];
+let _profileEdit = { members: [] };
+
+async function loadPartyProfiles() {
+  const data = await (await fetch('/api/party-profiles')).json();
+  _profiles = data.ok ? data.profiles : [];
+  renderPartyList();
+}
+
+function renderPartyList() {
+  const el = document.getElementById('party-list');
+  if (!el) return;
+  if (!_profiles.length) { el.innerHTML = '<p class="muted">No party profiles yet — create one.</p>'; return; }
+  el.innerHTML = _profiles.map(p => `<div class="profile-row">
+    <strong>${escHtml(p.id)}</strong> <span class="muted">${p.count} member${p.count===1?'':'s'}</span>
+    <span class="profile-members">${p.members.map(m => escHtml(m.name)).join(', ')}</span>
+    <button class="btn btn-ghost btn-xs" onclick="editPartyProfile('${escJs(p.id)}')">Edit</button>
+    <button class="btn btn-ghost btn-xs" onclick="deletePartyProfile('${escJs(p.id)}')">Delete</button>
+  </div>`).join('');
+}
+
+function newPartyProfile() {
+  openProfile({ id: '', members: [] });
+}
+
+async function editPartyProfile(id) {
+  const data = await (await fetch(`/api/party-profiles/${encodeURIComponent(id)}`)).json();
+  if (!data.ok) { alert(data.error || 'Could not open profile'); return; }
+  openProfile(data.profile);
+}
+
+function openProfile(p) {
+  _profileEdit = { members: (p.members || []).map(m => ({...m})) };
+  document.getElementById('profile-title').textContent = p.id ? `Edit: ${p.id}` : 'New Party Profile';
+  document.getElementById('p-id').value = p.id || '';
+  document.getElementById('profile-error').style.display = 'none';
+  renderProfileRows();
+  const panel = document.getElementById('profile-panel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeProfile() { document.getElementById('profile-panel').style.display = 'none'; }
+
+function addMember() {
+  _profileEdit.members.push({ name: '', type: 'PC', ac: '', max_hp: '', init_mod: '', notes: '' });
+  renderProfileRows();
+}
+function removeMember(i) { _profileEdit.members.splice(i, 1); renderProfileRows(); }
+function setMemberField(i, field, val) { _profileEdit.members[i][field] = val; }
+
+function renderProfileRows() {
+  const el = document.getElementById('profile-rows');
+  if (!_profileEdit.members.length) { el.innerHTML = '<p class="muted">No members yet. Add one below.</p>'; return; }
+  const inp = (i, field, cur, ph, w) =>
+    `<input type="text" value="${escHtml(cur ?? '')}" placeholder="${ph}" style="width:${w}"
+       oninput="setMemberField(${i},'${field}',this.value)">`;
+  let html = `<table class="builder-table"><thead><tr>
+    <th>Name</th><th>Type</th><th>AC</th><th>Max HP</th><th>Init</th><th>Notes</th><th></th>
+    </tr></thead><tbody>`;
+  html += _profileEdit.members.map((m, i) => `<tr>
+    <td>${inp(i,'name',m.name,'name','110px')}</td>
+    <td><select onchange="setMemberField(${i},'type',this.value)">${
+      PARTY_TYPES.map(t => `<option ${t===(m.type||'PC')?'selected':''}>${t}</option>`).join('')}</select></td>
+    <td><input type="number" value="${m.ac ?? ''}" style="width:50px" oninput="setMemberField(${i},'ac',this.value)"></td>
+    <td><input type="number" value="${m.max_hp ?? ''}" style="width:60px" oninput="setMemberField(${i},'max_hp',this.value)"></td>
+    <td><input type="number" value="${m.init_mod ?? ''}" style="width:46px" oninput="setMemberField(${i},'init_mod',this.value)"></td>
+    <td>${inp(i,'notes',m.notes,'','140px')}</td>
+    <td><button class="btn btn-ghost btn-xs" onclick="removeMember(${i})">✕</button></td>
+  </tr>`).join('');
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function savePartyProfile() {
+  const err = document.getElementById('profile-error');
+  err.style.display = 'none';
+  const id = document.getElementById('p-id').value.trim();
+  if (!id) { err.textContent = 'Profile ID is required.'; err.style.display = 'inline'; return; }
+  const data = await (await fetch('/api/party-profiles/save', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ id, members: _profileEdit.members })
+  })).json();
+  if (!data.ok) { err.textContent = data.error || 'Save failed'; err.style.display = 'inline'; return; }
+  closeProfile();
+  loadPartyProfiles();
+  loadBattles();   // refresh party pickers on the battle cards
+}
+
+async function deletePartyProfile(id) {
+  if (!confirm(`Delete party profile “${id}”?`)) return;
+  const data = await (await fetch(`/api/party-profiles/${encodeURIComponent(id)}`, { method: 'DELETE' })).json();
+  if (!data.ok) { alert(data.error || 'Delete failed'); return; }
+  loadPartyProfiles();
+  loadBattles();
+}
 
 async function resumeEncounter() {
   const r = await fetch('/api/resume', { method: 'POST' });
@@ -181,5 +621,10 @@ async function startEncounter() {
     window.location.href = '/encounter';
   }
 }
+
+// On load: pull battles (which also pulls party profiles), or just party profiles if a
+// workspace/tracker is set without a Battle Library yet.
+if ({{ 'true' if battle_library_found else 'false' }}) { loadBattles(); }
+else if ({{ 'true' if combat_tracker_path else 'false' }}) { loadPartyProfiles(); }
 </script>
 {% endblock %}

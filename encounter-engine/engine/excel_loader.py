@@ -1,7 +1,7 @@
 """Parse an Excel workbook into an Encounter model."""
 from __future__ import annotations
 import re
-from typing import Optional
+from typing import Callable, Optional
 import openpyxl
 
 from .models import (
@@ -217,116 +217,174 @@ def load_creature_sheet(wb: openpyxl.Workbook, tab_name: str) -> dict:
     return stats
 
 
+# ── Roster parsing (shared by single-workbook load and battle-library load) ─────
+
+# Optional columns I–L exist only on Battle Library definition sheets; legacy
+# "Battle List" sheets lack them and read as "".
+ROSTER_COLUMNS = [
+    "type", "name", "npc_source", "quantity", "group_name", "initiative_mode",
+    "hp_override", "notes", "starting_conditions", "starting_status",
+    "variant_id", "trigger",
+]
+
+
+def read_battle_list_rows(ws) -> list[dict]:
+    """Read roster rows from a Battle-List-shaped sheet into raw string dicts.
+
+    Finds the header row by scanning column A for 'Type' (else row 1), then reads
+    each subsequent row's columns A–L. Blank/trailing rows are included verbatim;
+    ``build_combatant_from_row`` decides which to skip. The same column layout is
+    used by the legacy "Battle List" sheet and by Battle Library definition sheets.
+    """
+    header_row = None
+    for row in ws.iter_rows(min_col=1, max_col=1):
+        cell = row[0]
+        if cell.value and str(cell.value).strip().lower() == "type":
+            header_row = cell.row
+            break
+    if header_row is None:
+        header_row = 1
+
+    rows: list[dict] = []
+    for r in range(header_row + 1, ws.max_row + 1):
+        def rv(col: int):
+            v = ws.cell(row=r, column=col).value
+            return str(v).strip() if v is not None else ""
+        rows.append({key: rv(i + 1) for i, key in enumerate(ROSTER_COLUMNS)})
+    return rows
+
+
+def build_combatant_from_row(
+    row: dict, resolve: Callable[[str], dict]
+) -> Optional[Combatant]:
+    """Turn one raw roster-row dict into a Combatant.
+
+    Creature stats come from ``resolve(npc_source) -> stats dict``; the resolver may
+    target a different workbook (e.g. Combat Tracker.xlsx) than the roster's source.
+    Returns None for rows that should be skipped (blank Type, quantity <= 0).
+    """
+    combatant_type = row.get("type", "")
+    if not combatant_type:
+        return None  # blank row
+
+    name = row.get("name", "")
+    npc_source = row.get("npc_source", "")
+    quantity_raw = row.get("quantity", "")
+    group_name = row.get("group_name", "")
+    initiative_mode = row.get("initiative_mode", "") or "Individual"
+    hp_override_raw = row.get("hp_override", "")
+    notes = row.get("notes", "")
+
+    try:
+        quantity = int(quantity_raw) if quantity_raw else 1
+    except ValueError:
+        quantity = 1
+
+    # Quantity 0 (or negative) means "leave this one out of the encounter".
+    # Blank quantity still defaults to 1 above.
+    if quantity <= 0:
+        return None
+
+    hp_override = None
+    try:
+        hp_override = int(hp_override_raw) if hp_override_raw else None
+    except ValueError:
+        pass
+
+    # Resolve creature stats if an NPC source is specified.
+    creature = resolve(npc_source) if npc_source else {}
+
+    max_hp = hp_override if hp_override is not None else creature.get("max_hp")
+    display_name = group_name if group_name else name
+
+    is_group = quantity > 1
+
+    members: list[Member] = []
+    if is_group:
+        for i in range(1, quantity + 1):
+            members.append(Member(
+                id=make_id(),
+                name=f"{name} {i}",
+                max_hp=max_hp or 0,
+            ))
+
+    cid = make_id()
+    combatant = Combatant(
+        id=cid,
+        name=display_name,
+        combatant_type=combatant_type,
+        source_tab=npc_source or None,
+        initiative=None,
+        initiative_mod=creature.get("initiative_mod", 0),
+        ac=creature.get("ac"),
+        max_hp=max_hp,
+        is_group=is_group,
+        members=members,
+        initiative_mode=initiative_mode,
+        attacks_per_round=creature.get("attacks_per_round", 1),
+        notes=notes,
+        speed=creature.get("speed", ""),
+        size_type_alignment=creature.get("size_type_alignment", ""),
+        proficiency_bonus=creature.get("proficiency_bonus", 0),
+        ability_scores=creature.get("ability_scores", {}),
+        ability_mods=creature.get("ability_mods", {}),
+        save_bonuses=creature.get("save_bonuses", {}),
+        resistances=creature.get("resistances", ""),
+        immunities=creature.get("immunities", ""),
+        condition_immunities=creature.get("condition_immunities", ""),
+        senses=creature.get("senses", ""),
+        attacks=creature.get("attacks", []),
+        traits=creature.get("traits", []),
+        actions=creature.get("actions", []),
+        bonus_actions=creature.get("bonus_actions", []),
+        reactions=creature.get("reactions", []),
+        bloodied_effects=creature.get("bloodied_effects", []),
+    )
+
+    # Optional battle-definition extras (cols J/K). Legacy Battle List rows lack
+    # these (read as ""), so they are no-ops there.
+    starting_conditions = row.get("starting_conditions", "")
+    if starting_conditions:
+        combatant.conditions = [
+            c.strip() for c in starting_conditions.split(",") if c.strip()
+        ]
+    starting_status = row.get("starting_status", "")
+    if starting_status:
+        combatant.status_override = starting_status
+
+    return combatant
+
+
+def make_workbook_resolver(wb) -> Callable[[str], dict]:
+    """Return a creature resolver `tab_name -> stats dict` bound to an open workbook."""
+    return lambda tab_name: load_creature_sheet(wb, tab_name)
+
+
+def make_combat_tracker_resolver(combat_tracker_path: str) -> Callable[[str], dict]:
+    """Open the Combat Tracker workbook (read-only) and return a creature resolver.
+
+    Used to resolve creature/NPC sources referenced by a battle definition that lives
+    in a *different* workbook (Battle_Library.xlsx).
+    """
+    wb = openpyxl.load_workbook(combat_tracker_path, data_only=True)
+    return make_workbook_resolver(wb)
+
+
 def load_encounter(path: str) -> Encounter:
-    """Parse workbook at path into an Encounter."""
+    """Parse a single workbook (its 'Battle List' sheet + creature tabs) into an Encounter."""
     wb = openpyxl.load_workbook(path, data_only=True)
 
     if "Battle List" not in wb.sheetnames:
         raise ValueError("Workbook has no 'Battle List' sheet")
 
-    roster_ws = wb["Battle List"]
+    rows = read_battle_list_rows(wb["Battle List"])
+    resolve = make_workbook_resolver(wb)
+
     enc = Encounter(source_path=path)
-
-    # Find header row — look for "Type" in column A
-    header_row = None
-    for row in roster_ws.iter_rows(min_col=1, max_col=1):
-        cell = row[0]
-        if cell.value and str(cell.value).strip().lower() == "type":
-            header_row = cell.row
-            break
-
-    if header_row is None:
-        # Fall back to row 1
-        header_row = 1
-
-    data_start = header_row + 1
-    max_row = roster_ws.max_row
-
-    for r in range(data_start, max_row + 1):
-        def rv(col: int):
-            v = roster_ws.cell(row=r, column=col).value
-            return str(v).strip() if v is not None else ""
-
-        combatant_type = rv(1)
-        if not combatant_type:
-            continue  # blank row
-
-        name = rv(2)
-        npc_source = rv(3)
-        quantity_raw = rv(4)
-        group_name = rv(5)
-        initiative_mode = rv(6) or "Individual"
-        hp_override_raw = rv(7)
-        notes = rv(8)
-
-        try:
-            quantity = int(quantity_raw) if quantity_raw else 1
-        except ValueError:
-            quantity = 1
-
-        # Quantity 0 (or negative) means "leave this one out of the encounter".
-        # Blank quantity still defaults to 1 above.
-        if quantity <= 0:
+    for row in rows:
+        combatant = build_combatant_from_row(row, resolve)
+        if combatant is None:
             continue
-
-        hp_override = None
-        try:
-            hp_override = int(hp_override_raw) if hp_override_raw else None
-        except ValueError:
-            pass
-
-        # Load creature sheet if NPC source is specified
-        creature = {}
-        if npc_source:
-            creature = load_creature_sheet(wb, npc_source)
-
-        max_hp = hp_override if hp_override is not None else creature.get("max_hp")
-        display_name = group_name if group_name else name
-
-        is_group = quantity > 1
-
-        members: list[Member] = []
-        if is_group:
-            for i in range(1, quantity + 1):
-                members.append(Member(
-                    id=make_id(),
-                    name=f"{name} {i}",
-                    max_hp=max_hp or 0,
-                ))
-
-        cid = make_id()
-        combatant = Combatant(
-            id=cid,
-            name=display_name,
-            combatant_type=combatant_type,
-            source_tab=npc_source or None,
-            initiative=None,
-            initiative_mod=creature.get("initiative_mod", 0),
-            ac=creature.get("ac"),
-            max_hp=max_hp,
-            is_group=is_group,
-            members=members,
-            initiative_mode=initiative_mode,
-            attacks_per_round=creature.get("attacks_per_round", 1),
-            notes=notes,
-            speed=creature.get("speed", ""),
-            size_type_alignment=creature.get("size_type_alignment", ""),
-            proficiency_bonus=creature.get("proficiency_bonus", 0),
-            ability_scores=creature.get("ability_scores", {}),
-            ability_mods=creature.get("ability_mods", {}),
-            save_bonuses=creature.get("save_bonuses", {}),
-            resistances=creature.get("resistances", ""),
-            immunities=creature.get("immunities", ""),
-            condition_immunities=creature.get("condition_immunities", ""),
-            senses=creature.get("senses", ""),
-            attacks=creature.get("attacks", []),
-            traits=creature.get("traits", []),
-            actions=creature.get("actions", []),
-            bonus_actions=creature.get("bonus_actions", []),
-            reactions=creature.get("reactions", []),
-            bloodied_effects=creature.get("bloodied_effects", []),
-        )
-        enc.combatants[cid] = combatant
-        enc.order.append(cid)
-
+        enc.combatants[combatant.id] = combatant
+        enc.order.append(combatant.id)
     return enc
