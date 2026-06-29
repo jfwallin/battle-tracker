@@ -136,15 +136,17 @@ a { color: var(--accent); }
 .group-badge { font-size: 10px; background: #3a3060; color: #c0a0ff; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
 
 /* ── Top Banner ───────────────────────────────────────────────────────────── */
+/* Encounter page: fixed-height flex column so the header (banner + enemy strip) stays
+   pinned at the top and the main area fills the rest and scrolls internally. */
+.encounter-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.encounter-header { flex: none; z-index: 100; }
 .top-banner {
-  position: sticky; top: 0; z-index: 100;
   background: var(--bg2); border-bottom: 2px solid var(--accent);
   display: grid; grid-template-columns: 80px 1fr auto 80px;
   align-items: center; gap: 12px; padding: 8px 16px;
   box-shadow: 0 2px 12px #0008;
 }
-/* Enemy status strip */
-.enemy-strip { position: sticky; top: 56px; z-index: 90; }
+/* Enemy status strip (sits directly under the banner inside the sticky header) */
 .enemy-strip:empty { display: none; }
 .enemy-strip-inner { display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
   background: var(--bg2); border-bottom: 1px solid var(--border); padding: 6px 16px; }
@@ -198,7 +200,8 @@ a { color: var(--accent); }
   display: grid;
   grid-template-columns: 1fr 320px;
   gap: 0;
-  height: calc(100vh - 68px);
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -489,7 +492,8 @@ a { color: var(--accent); }
 
 /* ── Responsive: narrow / iPad ────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .encounter-layout { grid-template-columns: 1fr; height: auto; }
+  .encounter-page { height: auto; overflow: visible; }
+  .encounter-layout { grid-template-columns: 1fr; flex: none; height: auto; }
   .right-rail { border-left: none; border-top: 1px solid var(--border); height: 360px; }
   .top-banner { grid-template-columns: 60px 1fr auto; }
   .banner-far-right { display: none; }

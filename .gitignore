@@ -1,0 +1,15 @@
+# Python caches / test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Excel lock/temp files (created while a workbook is open) — these cause
+# "Permission denied" during git add.
+~$*
+
+# Generated battle-report exports (the in-app export defaults into the workspace dir)
+battle_repor*.xlsx
+
+# Scratch files used during testing
+encounter-engine/_*.js
+encounter-engine/data/_tmp*

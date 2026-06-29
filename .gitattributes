@@ -1,0 +1,3 @@
+# Excel workbooks are binary — never apply line-ending (CRLF/LF) conversion to them.
+*.xlsx binary
+*.xls binary
