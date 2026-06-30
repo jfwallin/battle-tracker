@@ -464,9 +464,10 @@ function renderBuilderRows() {
     _variants.map(v => `<option value="${escJs(v.id)}" ${cur===v.id?'selected':''}>${escHtml(v.name||v.id)}</option>`).join('') +
     `</select>`;
   let html = `<table class="builder-table"><thead><tr>
-    <th>Type</th><th>Name</th><th>Source</th><th>Qty</th><th>Group</th><th>Init</th><th>HP ovr</th><th>Status</th><th>Variant</th><th>Notes</th><th></th>
+    <th></th><th>Type</th><th>Name</th><th>Source</th><th>Qty</th><th>Group</th><th>Init</th><th>HP ovr</th><th>Status</th><th>Variant</th><th>Notes</th>
     </tr></thead><tbody>`;
   html += _builder.rows.map((r, i) => `<tr>
+    <td><button class="btn btn-ghost btn-xs row-remove-btn" onclick="removeRow(${i})" title="Remove this row">✕</button></td>
     <td>${sel(i,'type',TYPES,r.type||'NPC')}</td>
     <td>${inp(i,'name',r.name,'name','90px')}</td>
     <td>${inp(i,'npc_source',r.npc_source,'tab','90px')}</td>
@@ -477,7 +478,6 @@ function renderBuilderRows() {
     <td>${inp(i,'starting_status',r.starting_status,'','70px')}</td>
     <td>${variantSel(i, r.variant_id)}</td>
     <td>${inp(i,'notes',r.notes,'','120px')}</td>
-    <td><button class="btn btn-ghost btn-xs" onclick="removeRow(${i})">✕</button></td>
   </tr>`).join('');
   html += '</tbody></table>';
   el.innerHTML = html;
