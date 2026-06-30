@@ -13,3 +13,8 @@ battle_repor*.xlsx
 # Scratch files used during testing
 encounter-engine/_*.js
 encounter-engine/data/_tmp*
+
+# Live session/machine-local state — OneDrive keeps these in sync directly;
+# tracking them in git just causes "everything modified" noise.
+encounter-engine/data/encounter_state.json
+encounter-engine/data/workspace.json

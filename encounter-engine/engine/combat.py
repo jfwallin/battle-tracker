@@ -143,15 +143,26 @@ def sort_initiative(encounter: Encounter) -> None:
 
 def _reset_turn_flags(combatant: Combatant) -> None:
     combatant.reaction_used = False
+    combatant.attacks_used = 0
+    combatant.bonus_action_used = False
+    combatant.movement_used = False
+
+
+def _reset_reactions_all(encounter: Encounter) -> None:
+    """Reset reactions for every combatant at the start of a new round."""
+    for c in encounter.combatants.values():
+        c.reaction_used = False
 
 
 def next_turn(encounter: Encounter) -> None:
     if not encounter.order:
         return
     encounter.turn_index += 1
-    if encounter.turn_index >= len(encounter.order):
+    new_round = encounter.turn_index >= len(encounter.order)
+    if new_round:
         encounter.turn_index = 0
         encounter.round += 1
+        _reset_reactions_all(encounter)
     _reset_turn_flags(encounter.combatants[encounter.order[encounter.turn_index]])
 
 

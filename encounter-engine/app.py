@@ -14,8 +14,8 @@ from engine.workspace import (
     discover_workspace, load_workspace_config, save_workspace_config,
 )
 from engine.battle_library import (
-    delete_battle, duplicate_battle, get_battle_definition, list_battles,
-    list_sources, load_battle, save_battle,
+    battle_preview_stats, delete_battle, duplicate_battle, get_battle_definition,
+    list_battles, list_sources, load_battle, save_battle,
 )
 from engine.game_data import (
     apply_party_profile, delete_party_profile, delete_recurring_npc, delete_variant,
@@ -258,6 +258,49 @@ def api_load_battle(battle_id):
         return jsonify({"ok": True, "encounter": _encounter_json()})
     except ValueError as e:
         return jsonify({"error": str(e)}), 422
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/battles/<battle_id>/preview")
+def api_battle_preview(battle_id):
+    """Return HP/XP/difficulty stats for the battle preview card."""
+    disc = _current_discovery()
+    if disc is None:
+        return jsonify({"error": "No workspace selected"}), 400
+    lib = disc["files"]["battle_library"]
+    if not lib["found"]:
+        return jsonify({"error": "No Battle Library"}), 400
+    tracker = disc["files"]["combat_tracker"]
+    tracker_path = tracker["path"] if tracker["found"] else None
+    gd = disc["files"]["game_data"]
+
+    # Load variants for HP adjustment in preview
+    variants: dict = {}
+    if gd["found"]:
+        try:
+            variants = {v["id"]: v for v in list_variants(gd["path"])}
+        except Exception:
+            variants = {}
+
+    # Determine party size/level from the selected profile (query param or default)
+    party_size = 4
+    party_level = 5
+    profile_id = request.args.get("profile_id", "")
+    if profile_id and gd["found"]:
+        try:
+            prof = get_party_profile(gd["path"], profile_id)
+            party_size = prof.get("count") or 4
+            party_level = prof.get("avg_level") or 5
+        except Exception:
+            pass
+
+    try:
+        stats = battle_preview_stats(
+            lib["path"], tracker_path, battle_id, variants=variants,
+            party_size=party_size, party_level=party_level,
+        )
+        return jsonify({"ok": True, "stats": stats})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -653,6 +696,28 @@ def api_set_status(cid):
 def api_set_notes(cid):
     data = request.get_json(force=True)
     _encounter.combatants[cid].notes = data.get("notes", "")
+
+
+@app.route("/api/combatant/<cid>/action-economy", methods=["POST"])
+@require_encounter
+@mutate
+def api_set_action_economy(cid):
+    c = _encounter.combatants.get(cid)
+    if not c:
+        return jsonify({"error": "Unknown combatant"}), 400
+    data = request.get_json(force=True)
+    field = data.get("field")
+    value = data.get("value")
+    if field == "attacks_used":
+        c.attacks_used = max(0, int(value))
+    elif field == "bonus_action_used":
+        c.bonus_action_used = bool(value)
+    elif field == "movement_used":
+        c.movement_used = bool(value)
+    elif field == "reaction_used":
+        c.reaction_used = bool(value)
+    else:
+        return jsonify({"error": f"Unknown field: {field}"}), 400
 
 
 @app.route("/api/combatant/<cid>/member/<mid>/status", methods=["POST"])

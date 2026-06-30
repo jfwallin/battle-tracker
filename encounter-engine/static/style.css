@@ -67,10 +67,13 @@ a { color: var(--accent); }
 .error-msg { color: var(--red); font-size: 13px; margin: 6px 0; }
 .resume-card { border-color: var(--accent); }
 
-.roster-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.roster-table th { text-align: left; padding: 6px 8px; color: var(--text-dim); border-bottom: 1px solid var(--border); font-weight: 500; font-size: 11px; text-transform: uppercase; }
-.roster-table td { padding: 6px 8px; border-bottom: 1px solid var(--bg3); }
+#roster-table-container { overflow-x: auto; }
+.roster-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
+.roster-table th { text-align: left; padding: 5px 6px; color: var(--text-dim); border-bottom: 1px solid var(--border); font-weight: 500; font-size: 11px; text-transform: uppercase; white-space: nowrap; }
+.roster-table td { padding: 5px 6px; border-bottom: 1px solid var(--bg3); }
 .roster-table tr:hover td { background: var(--bg3); }
+.roster-table td:nth-child(2) { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roster-table td:nth-child(3) { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .init-input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 3px 6px; border-radius: 3px; font-size: 13px; }
 .init-input:focus { outline: none; border-color: var(--accent); }
@@ -94,6 +97,16 @@ a { color: var(--accent); }
 .status-chip { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: var(--bg2); border: 1px solid var(--border); color: var(--text-dim); }
 .tag-chip { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #23314a; color: #9db8e0; }
 .battle-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.battle-preview { font-size: 12px; margin: 3px 0 2px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.prev-hp { color: #e08080; }
+.prev-xp { color: var(--text-dim); }
+.diff-badge { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; letter-spacing: 0.03em; }
+.diff-trivial { background: #1e3020; color: #78c888; }
+.diff-easy    { background: #1e3020; color: #4caf7d; border: 1px solid #2a5a38; }
+.diff-medium  { background: #2a2a10; color: #c8b040; border: 1px solid #4a4010; }
+.diff-hard    { background: #2e1e10; color: #d08040; border: 1px solid #5a3010; }
+.diff-deadly  { background: #2e1010; color: #e05454; border: 1px solid #6a2020; }
+.diff-unknown { background: var(--bg2); color: var(--text-dim); border: 1px solid var(--border); }
 
 /* Battle builder */
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -104,8 +117,9 @@ a { color: var(--accent); }
 .source-chip { background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
 .source-chip:hover { border-color: var(--accent); }
 .src-stat { color: var(--text-dim); font-size: 11px; }
-.builder-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.builder-table th { text-align: left; padding: 4px 5px; color: var(--text-dim); font-size: 10px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+#builder-rows, #profile-rows { overflow-x: auto; }
+.builder-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+.builder-table th { text-align: left; padding: 4px 5px; color: var(--text-dim); font-size: 10px; text-transform: uppercase; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .builder-table td { padding: 3px 5px; border-bottom: 1px solid var(--bg3); }
 .builder-table input, .builder-table select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 3px; padding: 3px 5px; font-size: 12px; }
 
@@ -489,6 +503,44 @@ a { color: var(--accent); }
 .modal-box li { margin-bottom: 4px; font-size: 13px; line-height: 1.4; }
 .add-lu-row { display: flex; gap: 6px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
 .add-lu-row input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+
+/* ── Action Economy Row ───────────────────────────────────────────────────── */
+.economy-row { display: flex; align-items: center; gap: 4px; margin: 4px 0 2px; flex-wrap: wrap; }
+.econ-label { font-size: 11px; color: var(--text-dim); margin-right: 2px; }
+.econ-sep { width: 8px; }
+
+/* Attack pips — individual NPC */
+.econ-atk-pip {
+  padding: 2px 6px; font-size: 13px; border-radius: 4px; cursor: pointer;
+  background: var(--bg3); border: 1px solid #555; color: #e0e0e0;
+  line-height: 1.4; min-width: 28px; text-align: center;
+}
+.econ-atk-pip:hover { border-color: #aaa; }
+.econ-atk-pip.used { background: #6b0000; border-color: #9b2020; color: #c08080; }
+
+/* Single pips — BA, Mv, Rx */
+.econ-pip {
+  padding: 2px 6px; font-size: 11px; border-radius: 4px; cursor: pointer;
+  background: var(--bg3); border: 1px solid #555; color: #c0c0c0;
+  line-height: 1.4; min-width: 26px; text-align: center;
+}
+.econ-pip:hover { border-color: #aaa; }
+.econ-pip.used { background: #333; border-color: #444; color: #555; text-decoration: line-through; }
+
+/* Reaction pip in special color when active */
+.econ-rx { border-color: #6060aa; color: #aaaadd; }
+.econ-rx.used { background: #333; border-color: #444; color: #555; text-decoration: line-through; }
+
+/* Group counter */
+.econ-group-counter {
+  padding: 2px 7px; font-size: 13px; border-radius: 4px; cursor: pointer;
+  background: var(--bg3); border: 1px solid #555; color: #e0e0e0; line-height: 1.4;
+}
+.econ-group-counter:hover { border-color: #aaa; }
+.econ-group-count {
+  font-size: 13px; font-weight: 600; color: #e0e0e0;
+  min-width: 36px; text-align: center; display: inline-block;
+}
 
 /* ── Responsive: narrow / iPad ────────────────────────────────────────────── */
 @media (max-width: 768px) {

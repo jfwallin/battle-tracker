@@ -8,6 +8,7 @@ A single flat ``Party Profiles`` sheet keyed by Profile ID (one row per characte
 hand-edit. Pure (no Flask) for unit testing.
 """
 from __future__ import annotations
+import math
 import os
 from typing import Optional
 
@@ -19,7 +20,7 @@ from .models import Combatant, make_id
 PARTY_SHEET = "Party Profiles"
 PARTY_HEADER = [
     "Profile ID", "Character Name", "Type", "Default AC",
-    "Default Max HP", "Initiative Modifier", "Notes",
+    "Default Max HP", "Initiative Modifier", "Level", "Notes",
 ]
 
 VARIANTS_SHEET = "Variants"
@@ -55,6 +56,17 @@ def _cell(ws, r, c) -> str:
     return str(v).strip() if v is not None else ""
 
 
+def _stat_cell(ws, r, c):
+    """Return cell value preserving type: int/float stays numeric, text stays text.
+    This lets _apply_expr distinguish '+3' (delta) from 3 (absolute)."""
+    v = ws.cell(row=r, column=c).value
+    if v is None:
+        return ""
+    if isinstance(v, (int, float)):
+        return v          # preserve numeric — caller treats as absolute
+    return str(v).strip() # string may start with +/- for delta
+
+
 def _header_row(ws) -> int:
     """Find the row whose column A is 'Profile ID' (else row 1)."""
     for row in ws.iter_rows(min_col=1, max_col=1):
@@ -80,7 +92,8 @@ def _read_member_rows(ws) -> list[dict]:
             "ac": _to_int(ws.cell(row=r, column=4).value),
             "max_hp": _to_int(ws.cell(row=r, column=5).value),
             "init_mod": _to_int(ws.cell(row=r, column=6).value) or 0,
-            "notes": _cell(ws, r, 7),
+            "level": _to_int(ws.cell(row=r, column=7).value),
+            "notes": _cell(ws, r, 8),
         })
     return members
 
@@ -97,10 +110,12 @@ def list_party_profiles(game_data_path: str) -> list[dict]:
         if pid not in by_id:
             by_id[pid] = {"id": pid, "members": []}
             order.append(pid)
-        by_id[pid]["members"].append({k: m[k] for k in ("name", "type", "ac", "max_hp", "init_mod", "notes")})
+        by_id[pid]["members"].append({k: m[k] for k in ("name", "type", "ac", "max_hp", "init_mod", "level", "notes")})
     profiles = [by_id[p] for p in order]
     for p in profiles:
         p["count"] = len(p["members"])
+        levels = [m["level"] for m in p["members"] if m.get("level")]
+        p["avg_level"] = round(sum(levels) / len(levels)) if levels else None
     return profiles
 
 
@@ -145,7 +160,8 @@ def apply_party_profile(encounter, game_data_path: str, profile_id: str) -> int:
 def _member_values(profile_id: str, m: dict) -> list:
     return [
         profile_id, m.get("name", ""), m.get("type") or "PC",
-        m.get("ac", ""), m.get("max_hp", ""), m.get("init_mod", 0), m.get("notes", ""),
+        m.get("ac", ""), m.get("max_hp", ""), m.get("init_mod", 0),
+        m.get("level", ""), m.get("notes", ""),
     ]
 
 
@@ -216,18 +232,27 @@ def _header_row_for(ws, label: str) -> int:
 
 
 def _apply_expr(current, expr):
-    """Apply a variant expression to a numeric stat:
-    "20" = absolute, "+3"/"-2" = delta, "x1.5"/"*0.5" = multiply. Blank leaves it unchanged.
-    Delta/multiply on a missing (None) value are skipped; absolute can set from None."""
-    expr = str(expr or "").strip()
+    """Apply a variant expression to a numeric stat.
+
+    Numeric value (int/float from Excel cell): always treated as absolute.
+    String value: "+3"/"-2" = delta from base, "x1.5"/"*0.5" = multiply, bare "20" = absolute.
+    Blank leaves the stat unchanged.
+    Delta/multiply on a missing (None) base are skipped; absolute can set from None.
+    """
+    if expr is None or expr == "":
+        return current
+    # Numeric cell value from Excel — absolute override (no sign preserved by Excel)
+    if isinstance(expr, (int, float)):
+        return int(round(expr))
+    expr = str(expr).strip()
     if not expr:
         return current
     try:
         if expr[0] in "+-":
             return current if current is None else current + int(round(float(expr)))
         if expr[0] in "xX*":
-            return current if current is None else int(round(current * float(expr.lstrip("xX*"))))
-        return int(round(float(expr)))  # absolute
+            return current if current is None else math.ceil(current * float(expr.lstrip("xX*")))
+        return int(round(float(expr)))  # absolute string
     except ValueError:
         return current
 
@@ -243,6 +268,8 @@ def _append_csv(existing: str, additions: str) -> str:
     return ", ".join(have)
 
 
+_VARIANT_STAT_COLS = {"ac", "max_hp", "init_mod", "attacks_per_round", "to_hit"}
+
 def _read_variant_rows(ws) -> list[dict]:
     hr = _header_row_for(ws, "variant id")
     out = []
@@ -250,7 +277,10 @@ def _read_variant_rows(ws) -> list[dict]:
         vid = _cell(ws, r, 1)
         if not vid:
             continue
-        out.append({key: _cell(ws, r, i + 1) for i, key in enumerate(_VARIANT_COLS)})
+        row = {}
+        for i, key in enumerate(_VARIANT_COLS):
+            row[key] = _stat_cell(ws, r, i + 1) if key in _VARIANT_STAT_COLS else _cell(ws, r, i + 1)
+        out.append(row)
     return out
 
 

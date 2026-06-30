@@ -27,6 +27,50 @@ from .excel_loader import (
 BATTLE_INDEX_SHEET = "Battle Index"
 VALID_INIT_MODES = {"Individual", "Shared", "Grouped Attacks", "Mob"}
 
+# 5e XP by CR (PHB/MM table)
+_CR_XP: dict[str, int] = {
+    "0": 10, "1/8": 25, "1/4": 50, "1/2": 100,
+    "1": 200, "2": 450, "3": 700, "4": 1100, "5": 1800,
+    "6": 2300, "7": 2900, "8": 3900, "9": 5000, "10": 5900,
+    "11": 7200, "12": 8400, "13": 10000, "14": 11500, "15": 13000,
+    "16": 15000, "17": 18000, "18": 20000, "19": 22000, "20": 25000,
+    "21": 33000, "22": 41000, "23": 50000, "24": 62000, "30": 155000,
+}
+# 5e XP thresholds per PC per level (Easy, Medium, Hard, Deadly)
+_XP_THRESH: dict[int, tuple[int, int, int, int]] = {
+    1: (25, 50, 75, 100), 2: (50, 100, 150, 200), 3: (75, 150, 225, 400),
+    4: (125, 250, 375, 500), 5: (250, 500, 750, 1100), 6: (300, 600, 900, 1400),
+    7: (350, 750, 1100, 1700), 8: (450, 900, 1400, 2100), 9: (550, 1100, 1600, 2400),
+    10: (600, 1200, 1900, 2800), 11: (800, 1600, 2400, 3600), 12: (1000, 2000, 3000, 4500),
+    13: (1100, 2200, 3400, 5100), 14: (1250, 2500, 3800, 5700), 15: (1400, 2800, 4300, 6400),
+    16: (1600, 3200, 4800, 7200), 17: (2000, 3900, 5900, 8800), 18: (2100, 4200, 6300, 9500),
+    19: (2400, 4900, 7300, 10900), 20: (2800, 5700, 8500, 12700),
+}
+# Encounter XP multipliers by monster count (for encounter difficulty)
+def _encounter_multiplier(count: int) -> float:
+    if count == 1: return 1.0
+    if count == 2: return 1.5
+    if count <= 6: return 2.0
+    if count <= 10: return 2.5
+    if count <= 14: return 3.0
+    return 4.0
+
+def _cr_to_xp(cr: str) -> int:
+    """Convert a CR string like '1/4', '5', '' to XP. Returns 0 if unknown."""
+    return _CR_XP.get(str(cr).strip(), 0)
+
+def _difficulty_tier(adjusted_xp: int, party_size: int, party_level: int) -> str:
+    """Return Easy/Medium/Hard/Deadly/Unknown based on 5e thresholds."""
+    level = max(1, min(20, party_level))
+    thresh = _XP_THRESH.get(level, _XP_THRESH[1])
+    easy, medium, hard, deadly = [t * party_size for t in thresh]
+    if adjusted_xp == 0: return "Unknown"
+    if adjusted_xp < easy: return "Trivial"
+    if adjusted_xp < medium: return "Easy"
+    if adjusted_xp < hard: return "Medium"
+    if adjusted_xp < deadly: return "Hard"
+    return "Deadly"
+
 _INDEX_COLUMNS = [
     "battle_id", "name", "definition_location", "status", "tags",
     "notes", "default_party_profile", "last_modified",
@@ -208,6 +252,137 @@ def load_battle(lib_path: str, tracker_path: str, battle_id: str,
     return enc
 
 
+# ── Battle preview stats (HP/CR estimates with variant support) ─────────────────
+
+def _apply_hp_expr(current: Optional[int], expr) -> Optional[int]:
+    """Apply a variant HP expression to a base HP value (mirrors game_data._apply_expr)."""
+    import math
+    if expr is None or expr == "":
+        return current
+    if isinstance(expr, (int, float)):
+        return int(round(expr))
+    expr = str(expr).strip()
+    if not expr:
+        return current
+    try:
+        if expr[0] in "+-":
+            return current if current is None else current + int(round(float(expr)))
+        if expr[0] in "xX*":
+            return current if current is None else math.ceil(current * float(expr.lstrip("xX*")))
+        return int(round(float(expr)))
+    except ValueError:
+        return current
+
+
+def battle_preview_stats(
+    lib_path: str,
+    tracker_path: Optional[str],
+    battle_id: str,
+    variants: Optional[dict] = None,
+    party_size: int = 4,
+    party_level: int = 5,
+) -> dict:
+    """Compute preview stats for one battle: total HP, total XP, difficulty.
+
+    Reads HP and CR from Combat Tracker tabs (cheap — only B8/B12 per sheet),
+    applies variant HP expressions if provided. Returns:
+      {total_hp, total_xp, adjusted_xp, difficulty, enemy_count, cr_list}
+    """
+    wb_lib = _open(lib_path)
+    if BATTLE_INDEX_SHEET not in wb_lib.sheetnames:
+        return {}
+    match = next((r for r in _read_index_rows(wb_lib[BATTLE_INDEX_SHEET])
+                  if r["battle_id"] == battle_id), None)
+    if match is None:
+        return {}
+    loc = match["definition_location"]
+    if not loc or loc not in wb_lib.sheetnames:
+        return {}
+
+    rows = read_battle_list_rows(wb_lib[loc])
+
+    # Open tracker workbook once for HP/CR lookups.
+    tracker_wb = None
+    if tracker_path:
+        try:
+            tracker_wb = _open(tracker_path)
+        except Exception:
+            tracker_wb = None
+
+    total_hp = 0
+    total_xp = 0
+    enemy_count = 0
+    cr_list: list[str] = []
+    all_cr_known = True
+
+    for row in rows:
+        ctype = (row.get("type") or "").strip().lower()
+        if ctype not in ("npc", "ally"):
+            continue
+        qraw = row.get("quantity", "")
+        try:
+            qty = int(qraw) if qraw else 1
+        except ValueError:
+            qty = 1
+        if qty <= 0:
+            continue
+
+        src = row.get("npc_source", "").strip()
+        base_hp: Optional[int] = None
+        cr_str = ""
+
+        if tracker_wb and src and src in tracker_wb.sheetnames:
+            ws = tracker_wb[src]
+            hp_val = ws["B8"].value
+            cr_val = ws["B12"].value
+            try:
+                base_hp = int(hp_val) if hp_val is not None else None
+            except (ValueError, TypeError):
+                base_hp = None
+            cr_str = str(cr_val).strip() if cr_val is not None else ""
+
+        # Apply HP override from the roster row.
+        hp_override_raw = row.get("hp_override", "")
+        if hp_override_raw:
+            try:
+                base_hp = int(hp_override_raw)
+            except ValueError:
+                pass
+
+        # Apply variant HP modifier if available.
+        vid = row.get("variant_id", "").strip()
+        if vid and variants and vid in variants:
+            v = variants[vid]
+            hp_expr = v.get("max_hp", "")
+            if hp_expr not in (None, ""):
+                base_hp = _apply_hp_expr(base_hp, hp_expr)
+
+        per_unit_hp = base_hp or 0
+        total_hp += per_unit_hp * qty
+        enemy_count += qty
+
+        xp = _cr_to_xp(cr_str)
+        total_xp += xp * qty
+        for _ in range(qty):
+            cr_list.append(cr_str or "?")
+        if not cr_str:
+            all_cr_known = False
+
+    multiplier = _encounter_multiplier(enemy_count)
+    adjusted_xp = int(total_xp * multiplier)
+    difficulty = _difficulty_tier(adjusted_xp, party_size, party_level) if all_cr_known else "Unknown"
+
+    return {
+        "total_hp": total_hp,
+        "total_xp": total_xp,
+        "adjusted_xp": adjusted_xp,
+        "multiplier": multiplier,
+        "difficulty": difficulty,
+        "enemy_count": enemy_count,
+        "cr_list": cr_list,
+    }
+
+
 # ── Builder support: list sources, read a definition, write/duplicate/delete ────
 
 def list_sources(tracker_path: str) -> list[dict]:
@@ -230,6 +405,7 @@ def list_sources(tracker_path: str) -> list[dict]:
             "role": str(ws["B5"].value).strip() if ws["B5"].value else "",
             "ac": ws["B7"].value,
             "max_hp": ws["B8"].value,
+            "cr": str(ws["B12"].value).strip() if ws["B12"].value is not None else "",
         })
     out.sort(key=lambda s: s["name"].lower())
     return out

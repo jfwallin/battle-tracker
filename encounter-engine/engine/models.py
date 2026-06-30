@@ -123,6 +123,9 @@ class Combatant:
     members: list[Member] = field(default_factory=list)
     initiative_mode: str = "Individual"  # "Individual|Shared|Grouped Attacks|Mob"
     attacks_per_round: int = 1
+    attacks_used: int = 0
+    bonus_action_used: bool = False
+    movement_used: bool = False
     reaction_used: bool = False
     notes: str = ""
     # Raw stat block strings for display
@@ -163,6 +166,9 @@ class Combatant:
             "members": [m.to_dict() for m in self.members],
             "initiative_mode": self.initiative_mode,
             "attacks_per_round": self.attacks_per_round,
+            "attacks_used": self.attacks_used,
+            "bonus_action_used": self.bonus_action_used,
+            "movement_used": self.movement_used,
             "reaction_used": self.reaction_used,
             "notes": self.notes,
             "speed": self.speed,
@@ -204,6 +210,9 @@ class Combatant:
             members=[Member.from_dict(m) for m in d.get("members", [])],
             initiative_mode=d.get("initiative_mode", "Individual"),
             attacks_per_round=d.get("attacks_per_round", 1),
+            attacks_used=d.get("attacks_used", 0),
+            bonus_action_used=d.get("bonus_action_used", False),
+            movement_used=d.get("movement_used", False),
             reaction_used=d.get("reaction_used", False),
             notes=d.get("notes", ""),
             speed=d.get("speed", ""),

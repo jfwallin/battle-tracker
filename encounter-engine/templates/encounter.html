@@ -518,6 +518,54 @@ async function npcHealsTarget(cid) {
   await api(`/api/combatant/${targetId}/heal`, 'POST', { amount: amt, source: npcName });
 }
 
+// ── Action Economy ────────────────────────────────────────────────────────────
+function setActionEconomy(cid, field, value) {
+  api('/api/combatant/' + cid + '/action-economy', 'POST', {field, value});
+}
+
+function actionEconomyRow(c) {
+  const cid = c.id;
+  const pool = c.attack_pool != null ? c.attack_pool : c.attacks_per_round;
+
+  if (c.is_group) {
+    // Group: show pool counter with +/reset
+    const used = c.attacks_used || 0;
+    const rxCls = c.reaction_used ? ' used' : '';
+    return '<div class="economy-row">' +
+      '<span class="econ-label">Atks:</span>' +
+      '<button class="btn econ-group-counter" onclick="setActionEconomy(\'' + cid + '\',\'attacks_used\',' + Math.max(0, used - 1) + ')" title="Remove attack">−</button>' +
+      '<span class="econ-group-count">' + used + '/' + pool + '</span>' +
+      '<button class="btn econ-group-counter" onclick="setActionEconomy(\'' + cid + '\',\'attacks_used\',' + (used + 1) + ')" title="Use attack">+</button>' +
+      '<button class="btn econ-pip econ-rx' + rxCls + '" onclick="setActionEconomy(\'' + cid + '\',\'reaction_used\',' + !c.reaction_used + ')" title="Reaction">Rx</button>' +
+      '</div>';
+  }
+
+  // Individual: pip per attack + BA, Mv, Rx
+  const atksUsed = c.attacks_used || 0;
+  const atkPips = [];
+  for (let i = 0; i < (c.attacks_per_round || 1); i++) {
+    const spent = i < atksUsed;
+    const nextVal = spent ? i : i + 1; // clicking a spent pip unremarks back to i, clicking open pip marks to i+1
+    atkPips.push(
+      '<button class="btn econ-atk-pip' + (spent ? ' used' : '') + '"' +
+      ' onclick="setActionEconomy(\'' + cid + '\',\'attacks_used\',' + (spent ? i : i + 1) + ')"' +
+      ' title="Attack ' + (i+1) + '">⚔</button>'
+    );
+  }
+
+  const baCls = c.bonus_action_used ? ' used' : '';
+  const mvCls = c.movement_used ? ' used' : '';
+  const rxCls = c.reaction_used ? ' used' : '';
+
+  return '<div class="economy-row">' +
+    atkPips.join('') +
+    '<span class="econ-sep"></span>' +
+    '<button class="btn econ-pip' + baCls + '" onclick="setActionEconomy(\'' + cid + '\',\'bonus_action_used\',' + !c.bonus_action_used + ')" title="Bonus Action">BA</button>' +
+    '<button class="btn econ-pip' + mvCls + '" onclick="setActionEconomy(\'' + cid + '\',\'movement_used\',' + !c.movement_used + ')" title="Movement">Mv</button>' +
+    '<button class="btn econ-pip' + rxCls + '" onclick="setActionEconomy(\'' + cid + '\',\'reaction_used\',' + !c.reaction_used + ')" title="Reaction">Rx</button>' +
+    '</div>';
+}
+
 // ── Monster Card ──────────────────────────────────────────────────────────────
 function renderMonsterCard(c, isCurrent) {
   const typeClass = `type-${(c.combatant_type||'npc').toLowerCase()}`;
@@ -557,6 +605,8 @@ function renderMonsterCard(c, isCurrent) {
   </div>
 
   <div class="conditions-row">${conditionChips(c)}</div>
+
+  ${actionEconomyRow(c)}
 
   <div class="attacks-row">
     ${attacks.map(a =>
@@ -651,6 +701,8 @@ function renderGroupCard(c, isCurrent) {
     </div>
     <span class="hp-label">${c.current_hp ?? '—'} / ${effectiveMaxHp(c)} HP</span>
   </div>
+
+  ${actionEconomyRow(c)}
 
   <div class="attacks-row">
     ${attacks.map(a =>
@@ -828,6 +880,9 @@ function openAttackModal(cid, attackName) {
     ? atk.damage_dice.map(d=>`${d.n}d${d.die}${d.bonus?'+'+d.bonus:''} ${d.damage_type}`).join(' + ')
     : '—';
 
+  const pool = c.attack_pool != null ? c.attack_pool : c.attacks_per_round;
+  const remaining = Math.max(1, pool - (c.attacks_used || 0));
+
   body.innerHTML = `
     <div class="atk-summary-line">${toHitDisp} to hit &bull; ${escHtml(dmgDisp)}</div>
     <div class="modal-field-row">
@@ -850,6 +905,11 @@ function openAttackModal(cid, attackName) {
       <label><input type="radio" name="advdis" value="adv"> Adv</label>
       <label><input type="radio" name="advdis" value="dis"> Dis</label>
     </div>
+    ${pool > 1 ? `<div class="modal-field-row">
+      <label># Attacks</label>
+      <input type="number" id="modal-atk-count" value="1" min="1" max="${remaining}" style="width:54px">
+      <span class="ac-note">${remaining} attack${remaining===1?'':'s'} remaining</span>
+    </div>` : ''}
     <button class="btn btn-primary" onclick="rollAttackModal()">Roll Attack</button>
     <div id="attack-result" style="margin-top:12px"></div>
   `;
@@ -880,26 +940,66 @@ function updateTargetAC() {
   }
 }
 
+// Client-side single-attack roll helper — returns {attack_roll, damage, half_damage, ...}
+function _rollOnceClientSide(atk, toHit, advVal, knownAC) {
+  const d1 = Math.ceil(Math.random()*20);
+  const d2 = (advVal !== 'normal') ? Math.ceil(Math.random()*20) : null;
+  const nat = advVal==='adv' ? Math.max(d1,d2||0) : advVal==='dis' ? Math.min(d1,d2||20) : d1;
+  const both = d2 ? [d1,d2] : [d1];
+  const total = nat + (toHit ?? 0);
+  const hit = knownAC != null ? (nat===20 || (nat!==1 && total >= knownAC)) : null;
+  const crit = nat === 20;
+  const attack_roll = { d20: nat, both_dice: both, total, hit, crit, to_hit: toHit ?? 0, target_ac: knownAC };
+  let damage = null, half_damage = null;
+  if (atk?.damage_dice?.length) {
+    let grand = 0;
+    const clauses = atk.damage_dice.map(d => {
+      const rolls = Array.from({length: crit ? d.n*2 : d.n}, ()=>Math.ceil(Math.random()*d.die));
+      const t = rolls.reduce((a,b)=>a+b,0) + d.bonus;
+      grand += t;
+      return {n:d.n,die:d.die,bonus:d.bonus,damage_type:d.damage_type,rolls,total:t};
+    });
+    damage = { clauses, grand_total: grand, crit };
+    half_damage = Math.floor(grand/2);
+  }
+  return { attack_roll, damage, half_damage };
+}
+
+// State for multi-attack results
+let _multiRolls = [];   // [{attack_roll, damage, half_damage, _applied}, ...]
+
 async function rollAttackModal() {
   const targetId = document.getElementById('modal-target').value;
   const advVal = document.querySelector('input[name="advdis"]:checked')?.value || 'normal';
   const adv = advVal === 'adv';
   const dis = advVal === 'dis';
-
-  // Override target AC from the input (handles PC targets)
   const acOverride = document.getElementById('modal-target-ac')?.value;
-  const acVal = acOverride ? parseInt(acOverride) : null;
+  const knownAC = acOverride ? parseInt(acOverride) : null;
+  const countEl = document.getElementById('modal-atk-count');
+  const atkCount = countEl ? Math.max(1, parseInt(countEl.value) || 1) : 1;
 
+  const cid = _pendingAttack.combatant_id;
+  const c = ENC.combatants[cid];
+  const atk = (c?.attacks||[]).find(a => a.name === _pendingAttack.attack_name);
+
+  if (atkCount > 1 && atk) {
+    // Multi-attack: roll all client-side and show batch chips
+    _multiRolls = [];
+    _pendingAttack.targetId = targetId;
+    _pendingAttack.atkCount = atkCount;
+    for (let i = 0; i < atkCount; i++) {
+      const r = _rollOnceClientSide(atk, atk.to_hit, advVal, knownAC);
+      _multiRolls.push({ ...r, _applied: false });
+    }
+    _renderMultiAttackResult(targetId, atk);
+    return;
+  }
+
+  // Single attack — use server roll (existing path)
   const data = await fetch('/api/attack/roll', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      combatant_id: _pendingAttack.combatant_id,
-      attack_name: _pendingAttack.attack_name,
-      target_id: targetId,
-      adv, dis,
-      ac_override: acVal,
-    })
+    body: JSON.stringify({ combatant_id: cid, attack_name: _pendingAttack.attack_name, target_id: targetId, adv, dis, ac_override: knownAC })
   }).then(r => r.json());
 
   if (!data.ok) {
@@ -911,30 +1011,10 @@ async function rollAttackModal() {
 
   // If server didn't return attack_roll for a to_hit attack, build it client-side
   if (!res.attack_roll && !res.save_dc) {
-    const c = ENC.combatants[res.combatant_id];
-    const atk = (c?.attacks||[]).find(a => a.name === res.attack_name);
     if (atk?.to_hit != null) {
-      const advVal2 = document.querySelector('input[name="advdis"]:checked')?.value || 'normal';
-      const d1 = Math.ceil(Math.random()*20);
-      const d2 = (advVal2 !== 'normal') ? Math.ceil(Math.random()*20) : null;
-      const nat = advVal2==='adv' ? Math.max(d1,d2||0) : advVal2==='dis' ? Math.min(d1,d2||20) : d1;
-      const both = d2 ? [d1,d2] : [d1];
-      const acInput = document.getElementById('modal-target-ac')?.value;
-      const knownAC = acInput ? parseInt(acInput) : null;
-      const hit = knownAC != null ? (nat===20 || (nat!==1 && nat+atk.to_hit >= knownAC)) : null;
-      res.attack_roll = { d20: nat, both_dice: both, total: nat+atk.to_hit, hit, crit: nat===20, to_hit: atk.to_hit, target_ac: knownAC };
-      // Roll damage client-side if we have dice
-      if (!res.damage && atk.damage_dice?.length) {
-        let grand = 0;
-        const clauses = atk.damage_dice.map(d => {
-          const rolls = Array.from({length: nat===20 ? d.n*2 : d.n}, ()=>Math.ceil(Math.random()*d.die));
-          const total = rolls.reduce((a,b)=>a+b,0) + d.bonus;
-          grand += total;
-          return {n:d.n,die:d.die,bonus:d.bonus,damage_type:d.damage_type,rolls,total};
-        });
-        res.damage = { clauses, grand_total: grand, crit: nat===20 };
-        res.half_damage = Math.floor(grand/2);
-      }
+      const rolled = _rollOnceClientSide(atk, atk.to_hit, advVal, knownAC);
+      res.attack_roll = rolled.attack_roll;
+      if (!res.damage) { res.damage = rolled.damage; res.half_damage = rolled.half_damage; }
     }
   }
 
@@ -949,12 +1029,8 @@ async function rollAttackModal() {
     const isPC = target?.combatant_type === 'PC';
     const noAC = ar.target_ac == null;
 
-    // Show roll result
-    const hitClass = ar.crit ? 'result-crit' : ar.hit ? 'result-hit' : 'result-miss';
     const autoLabel = ar.crit ? '&#9889; CRIT!' : ar.hit ? 'HIT' : 'MISS';
-    const hitLabel = (isPC || noAC)
-      ? `<strong>${ar.total}</strong> — Hit or Miss?`
-      : autoLabel;
+    const hitLabel = (isPC || noAC) ? `<strong>${ar.total}</strong> — Hit or Miss?` : autoLabel;
 
     let html = `<div class="attack-result-block ${ar.crit ? 'result-crit' : noAC || isPC ? 'result-unknown' : ar.hit ? 'result-hit' : 'result-miss'}">
       <div class="result-label">${hitLabel}</div>
@@ -962,7 +1038,6 @@ async function rollAttackModal() {
 
     if (res.damage) {
       html += renderDamageResult(res.damage);
-      // Always show apply buttons so DM can choose
       if (ar.hit && !isPC && !noAC) {
         html += `<button class="btn btn-danger" onclick="applyAttackDamage()">Apply ${res.damage.grand_total} damage</button>`;
       } else {
@@ -970,10 +1045,8 @@ async function rollAttackModal() {
         html += `<button class="btn btn-ghost btn-sm" onclick="logAttackMiss()">Log Miss</button>`;
       }
     } else if (ar.hit || isPC || noAC) {
-      // No damage dice — just show the roll
       html += `<div class="result-note">No damage dice — apply manually if needed</div>`;
     } else {
-      // Clear miss (known AC, not a hit) — record it for the battle report.
       html += `<button class="btn btn-ghost btn-sm" onclick="logAttackMiss()">Log Miss</button>`;
     }
 
@@ -990,6 +1063,92 @@ async function rollAttackModal() {
     }
     html += '</div>';
     el.innerHTML = html;
+  }
+}
+
+function _renderMultiAttackResult(targetId, atk) {
+  const target = ENC.combatants[targetId];
+  const isPC = target?.combatant_type === 'PC';
+  const sign = (atk.to_hit ?? 0) >= 0 ? '+' : '';
+  let totalApplicable = 0;
+  let allApplied = true;
+
+  const chips = _multiRolls.map((r, i) => {
+    const ar = r.attack_roll;
+    const noAC = ar.target_ac == null;
+    const autoHit = ar.crit || (!isPC && !noAC && ar.hit);
+    if (!r._applied) allApplied = false;
+    const chipCls = ar.crit ? 'roll-crit' : (isPC || noAC) ? 'roll-unknown' : ar.hit ? 'roll-hit' : 'roll-miss';
+    const dmgStr = r.damage ? ` → <b>${r.damage.grand_total}</b>` : '';
+    return `<span class="roll-chip ${chipCls}" title="d20 ${ar.d20} ${sign}${ar.to_hit} = ${ar.total}">${ar.total}${dmgStr}</span>`;
+  }).join('');
+
+  const applyBtns = _multiRolls.map((r, i) => {
+    if (r._applied) return `<span class="seg-applied">✓ ${r.damage?.grand_total ?? 'hit'}</span>`;
+    const ar = r.attack_roll;
+    const noAC = ar.target_ac == null;
+    const rollDesc = `d20(${ar.d20})${sign}${ar.to_hit}=${ar.total}`;
+    if (r.damage) {
+      return `<button class="btn btn-danger btn-sm" onclick="applyMultiRoll(${i})">Atk ${i+1}: Apply ${r.damage.grand_total}${ar.crit?' (CRIT)':''}</button>` +
+             (isPC || noAC ? `<button class="btn btn-ghost btn-xs" onclick="missMultiRoll(${i})">Miss</button>` : (!ar.hit ? `<button class="btn btn-ghost btn-xs" onclick="missMultiRoll(${i})">Miss</button>` : ''));
+    }
+    return `<button class="btn btn-ghost btn-xs" onclick="missMultiRoll(${i})">Atk ${i+1}: Miss (${rollDesc})</button>`;
+  }).join(' ');
+
+  const unapplied = _multiRolls.filter(r => !r._applied && r.damage);
+  const applyAllBtn = unapplied.length > 1
+    ? `<button class="btn btn-danger" onclick="applyAllMultiRolls()">Apply All Hits</button>` : '';
+
+  document.getElementById('attack-result').innerHTML =
+    `<div class="attack-result-block result-hit">
+      <div class="result-label">${_multiRolls.length} attacks vs ${escHtml(target?.name||'target')}</div>
+      <div class="roll-chips">${chips}</div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${applyBtns}</div>
+      ${applyAllBtn ? `<div style="margin-top:8px">${applyAllBtn}</div>` : ''}
+    </div>`;
+}
+
+async function applyMultiRoll(i) {
+  const r = _multiRolls[i];
+  if (!r || r._applied || !r.damage) return;
+  const cid = _pendingAttack.combatant_id;
+  const targetId = _pendingAttack.targetId;
+  const source = ENC.combatants[cid]?.name || 'DM';
+  const ar = r.attack_roll;
+  const dtype = r.damage.clauses?.[0]?.damage_type || '';
+  await api('/api/attack/apply', 'POST', {
+    target_id: targetId, amount: r.damage.grand_total, damage_type: dtype,
+    attack_name: _pendingAttack.attack_name, source,
+    outcome: ar.crit ? 'crit' : 'hit', roll: ar.total,
+  });
+  r._applied = true;
+  _incrementAttacksUsed();
+  const atk = (ENC.combatants[cid]?.attacks||[]).find(a => a.name === _pendingAttack.attack_name);
+  _renderMultiAttackResult(targetId, atk);
+}
+
+async function missMultiRoll(i) {
+  const r = _multiRolls[i];
+  if (!r || r._applied) return;
+  const cid = _pendingAttack.combatant_id;
+  const source = ENC.combatants[cid]?.name || 'DM';
+  await api('/api/attack/log-miss', 'POST', {
+    target_id: _pendingAttack.targetId, attack_name: _pendingAttack.attack_name,
+    source, roll: r.attack_roll.total,
+  });
+  r._applied = true;
+  _incrementAttacksUsed();
+  const atk = (ENC.combatants[cid]?.attacks||[]).find(a => a.name === _pendingAttack.attack_name);
+  _renderMultiAttackResult(_pendingAttack.targetId, atk);
+}
+
+async function applyAllMultiRolls() {
+  for (let i = 0; i < _multiRolls.length; i++) {
+    const r = _multiRolls[i];
+    if (!r._applied) {
+      if (r.damage && r.attack_roll.hit !== false) await applyMultiRoll(i);
+      else await missMultiRoll(i);
+    }
   }
 }
 
@@ -1059,6 +1218,17 @@ function renderDamageResult(dmg) {
   return html + '</div>';
 }
 
+function _incrementAttacksUsed() {
+  const cid = _pendingAttack?.combatant_id;
+  if (!cid) return;
+  const c = ENC.combatants[cid];
+  if (!c) return;
+  const pool = c.attack_pool != null ? c.attack_pool : c.attacks_per_round;
+  if ((c.attacks_used || 0) < pool) {
+    setActionEconomy(cid, 'attacks_used', (c.attacks_used || 0) + 1);
+  }
+}
+
 async function applyAttackDamage(half=false) {
   if (!_pendingAttack?.result) return;
   const res = _pendingAttack.result;
@@ -1081,6 +1251,7 @@ async function applyAttackDamage(half=false) {
       attack_name: res.attack_name, source, outcome, roll
     });
   }
+  _incrementAttacksUsed();
   closeAttackModal();
 }
 
@@ -1092,6 +1263,7 @@ async function logAttackMiss() {
     target_id: res.target_id, attack_name: res.attack_name, source,
     roll: res.attack_roll?.total ?? null,
   });
+  _incrementAttacksUsed();
   closeAttackModal();
 }
 
@@ -1120,6 +1292,7 @@ function closeAttackModal(e) {
 // Group attack split across targets: allocation state + per-segment results.
 let _grp = null;
 let _segments = [];
+// _multiRolls declared near _rollOnceClientSide above
 const GRP_MODE_HELP = {
   batch: 'Batch: a separate d20 per attacker, damage rolled per hit (crits double that attacker’s dice). Each attacker hits one target — shows who hit whom. Best for ≤ ~10.',
   mob: 'Mob: no d20s — estimates hits per target from the 5e mob table, then rolls damage per hit. Aggregate (no individual rolls). Fast for large swarms.',
@@ -1348,6 +1521,13 @@ async function applySegment(i) {
   if (s._applied) return;
   await applyDamageToTarget(_grp.cid, s.target_id, segmentApplyAmount(s), _grp.attackName, segmentVolleyMeta(s));
   s._applied = true;
+  // Increment economy tracker by the number of attackers in this segment
+  const c = ENC.combatants[_grp.cid];
+  if (c) {
+    const pool = c.attack_pool != null ? c.attack_pool : c.attacks_per_round;
+    const newUsed = Math.min(pool, (c.attacks_used || 0) + (s.count || 1));
+    setActionEconomy(_grp.cid, 'attacks_used', newUsed);
+  }
   const el = document.getElementById('seg-result-' + i);
   if (el) el.innerHTML = renderSegmentResult(i);
 }

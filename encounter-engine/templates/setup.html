@@ -226,6 +226,7 @@
 {% block extra_js %}
 <script>
 let _enc = null;
+let _battleDefaults = {};  // battle_id -> default_party_profile
 
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -280,9 +281,12 @@ function partyOptions(defaultProfile) {
   return html;
 }
 
+const _DIFF_CLASS = { Trivial: 'diff-trivial', Easy: 'diff-easy', Medium: 'diff-medium', Hard: 'diff-hard', Deadly: 'diff-deadly', Unknown: 'diff-unknown' };
+
 function renderBattles(battles) {
   const list = document.getElementById('battle-list');
   if (!battles.length) { list.innerHTML = '<p class="muted">No battles in the library yet.</p>'; return; }
+  battles.forEach(b => { _battleDefaults[b.id] = b.default_party_profile || ''; });
   list.innerHTML = battles.map(b => {
     const c = b.counts || {};
     const counts = `${c.npcs||0} NPC · ${c.groups||0} group · ${c.pcs||0} PC · ${c.allies||0} ally · ${c.hazards||0} hazard · ${c.events||0} event`;
@@ -297,11 +301,12 @@ function renderBattles(battles) {
       </div>
       ${b.notes ? `<div class="battle-notes">${escHtml(b.notes)}</div>` : ''}
       <div class="battle-counts">${counts}</div>
+      <div class="battle-preview" id="bprev-${escHtml(b.id)}"><span class="muted" style="font-size:0.8em">calculating…</span></div>
       ${warns}
       <div class="battle-actions">
         <button class="btn btn-primary btn-sm" onclick="loadBattle('${escJs(b.id)}')">Load Battle ▶</button>
         <label class="party-pick">Party:
-          <select id="party-sel-${b.id}">${partyOptions(b.default_party_profile)}</select>
+          <select id="party-sel-${b.id}" onchange="refreshPreview('${escJs(b.id)}')">${partyOptions(b.default_party_profile)}</select>
         </label>
         <button class="btn btn-ghost btn-sm" onclick="editBattle('${escJs(b.id)}')">Edit</button>
         <button class="btn btn-ghost btn-sm" onclick="duplicateBattle('${escJs(b.id)}')">Duplicate</button>
@@ -309,6 +314,43 @@ function renderBattles(battles) {
       </div>
     </div>`;
   }).join('');
+  // Load preview stats for each battle
+  battles.forEach(b => loadPreview(b.id));
+}
+
+async function loadPreview(battleId) {
+  const sel = document.getElementById('party-sel-' + battleId);
+  let profileId = sel ? sel.value : '__default__';
+  if (profileId === '__default__') {
+    profileId = _battleDefaults[battleId] || '';
+  }
+  const url = '/api/battles/' + encodeURIComponent(battleId) + '/preview' +
+              (profileId ? '?profile_id=' + encodeURIComponent(profileId) : '');
+  const el = document.getElementById('bprev-' + battleId);
+  if (!el) return;
+  try {
+    const data = await (await fetch(url)).json();
+    if (!data.ok || !data.stats) { el.innerHTML = ''; return; }
+    const s = data.stats;
+    const diffCls = _DIFF_CLASS[s.difficulty] || 'diff-unknown';
+    let html = '';
+    if (s.enemy_count > 0) {
+      html += `<span class="prev-hp">&#9829; ${s.total_hp} HP</span>`;
+      if (s.total_xp > 0) {
+        html += ` <span class="prev-xp">${s.total_xp.toLocaleString()} XP`;
+        if (s.multiplier > 1) html += ` ×${s.multiplier} = ${s.adjusted_xp.toLocaleString()}`;
+        html += `</span>`;
+        html += ` <span class="diff-badge ${diffCls}">${escHtml(s.difficulty)}</span>`;
+      }
+    }
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = ''; }
+}
+
+async function refreshPreview(battleId) {
+  const el = document.getElementById('bprev-' + battleId);
+  if (el) el.innerHTML = '<span class="muted" style="font-size:0.8em">calculating…</span>';
+  await loadPreview(battleId);
 }
 
 async function loadBattle(id) {
@@ -388,7 +430,7 @@ function renderSources() {
   if (!items.length) { list.innerHTML = '<p class="muted">No matching creatures.</p>'; return; }
   list.innerHTML = items.map(s =>
     `<button class="source-chip" onclick="addSource('${escJs(s.tab)}','${escJs(s.name)}')">
-       ${escHtml(s.name)} <span class="src-stat">AC ${s.ac ?? '—'} · ${s.max_hp ?? '—'} HP</span>
+       ${escHtml(s.name)} <span class="src-stat">AC ${s.ac ?? '—'} · ${s.max_hp ?? '—'} HP${s.cr ? ' · CR ' + escHtml(s.cr) : ''}</span>
      </button>`).join('');
 }
 
@@ -492,8 +534,8 @@ function renderPartyList() {
   if (!el) return;
   if (!_profiles.length) { el.innerHTML = '<p class="muted">No party profiles yet — create one.</p>'; return; }
   el.innerHTML = _profiles.map(p => `<div class="profile-row">
-    <strong>${escHtml(p.id)}</strong> <span class="muted">${p.count} member${p.count===1?'':'s'}</span>
-    <span class="profile-members">${p.members.map(m => escHtml(m.name)).join(', ')}</span>
+    <strong>${escHtml(p.id)}</strong> <span class="muted">${p.count} member${p.count===1?'':'s'}${p.avg_level ? ' · lvl ' + p.avg_level : ''}</span>
+    <span class="profile-members">${p.members.map(m => escHtml(m.name) + (m.level ? ' L' + m.level : '')).join(', ')}</span>
     <button class="btn btn-ghost btn-xs" onclick="editPartyProfile('${escJs(p.id)}')">Edit</button>
     <button class="btn btn-ghost btn-xs" onclick="deletePartyProfile('${escJs(p.id)}')">Delete</button>
   </div>`).join('');
@@ -523,7 +565,7 @@ function openProfile(p) {
 function closeProfile() { document.getElementById('profile-panel').style.display = 'none'; }
 
 function addMember() {
-  _profileEdit.members.push({ name: '', type: 'PC', ac: '', max_hp: '', init_mod: '', notes: '' });
+  _profileEdit.members.push({ name: '', type: 'PC', ac: '', max_hp: '', init_mod: '', level: '', notes: '' });
   renderProfileRows();
 }
 function removeMember(i) { _profileEdit.members.splice(i, 1); renderProfileRows(); }
@@ -536,7 +578,7 @@ function renderProfileRows() {
     `<input type="text" value="${escHtml(cur ?? '')}" placeholder="${ph}" style="width:${w}"
        oninput="setMemberField(${i},'${field}',this.value)">`;
   let html = `<table class="builder-table"><thead><tr>
-    <th>Name</th><th>Type</th><th>AC</th><th>Max HP</th><th>Init</th><th>Notes</th><th></th>
+    <th>Name</th><th>Type</th><th>AC</th><th>Max HP</th><th>Init</th><th>Level</th><th>Notes</th><th></th>
     </tr></thead><tbody>`;
   html += _profileEdit.members.map((m, i) => `<tr>
     <td>${inp(i,'name',m.name,'name','110px')}</td>
@@ -545,7 +587,8 @@ function renderProfileRows() {
     <td><input type="number" value="${m.ac ?? ''}" style="width:50px" oninput="setMemberField(${i},'ac',this.value)"></td>
     <td><input type="number" value="${m.max_hp ?? ''}" style="width:60px" oninput="setMemberField(${i},'max_hp',this.value)"></td>
     <td><input type="number" value="${m.init_mod ?? ''}" style="width:46px" oninput="setMemberField(${i},'init_mod',this.value)"></td>
-    <td>${inp(i,'notes',m.notes,'','140px')}</td>
+    <td><input type="number" min="1" max="20" value="${m.level ?? ''}" style="width:46px" placeholder="—" oninput="setMemberField(${i},'level',this.value)"></td>
+    <td>${inp(i,'notes',m.notes,'','120px')}</td>
     <td><button class="btn btn-ghost btn-xs" onclick="removeMember(${i})">✕</button></td>
   </tr>`).join('');
   html += '</tbody></table>';
@@ -813,14 +856,21 @@ function renderRoster() {
       <td>${c.name}${c.is_group ? ' <span class="group-badge">group</span>' : ''}</td>
       <td>${c.source_tab || '—'}</td>
       <td><input type="number" class="init-input" value="${c.ac ?? ''}" placeholder="—"
-           onchange="setStat('${id}', 'ac', this.value)" style="width:55px" title="Edit AC (not saved to Excel)"></td>
-      <td><input type="number" class="init-input" value="${c.max_hp ?? ''}" placeholder="—"
-           onchange="setStat('${id}', 'max_hp', this.value)" style="width:65px"
-           title="${c.is_group ? 'Max HP per member — applies to all in the group' : 'Edit Max HP'} (not saved to Excel)"></td>
+           onchange="setStat('${id}', 'ac', this.value)" style="width:48px" title="Edit AC (not saved to Excel)"></td>
+      <td>${c.is_group
+        ? `<span title="Edit per-member HP (not saved to Excel)" style="display:inline-flex;align-items:center;gap:4px">
+             <input type="number" class="init-input" value="${c.max_hp ?? ''}" placeholder="—"
+               onchange="setStat('${id}', 'max_hp', this.value)" style="width:56px">
+             <span class="muted" style="font-size:11px">×${c.members.length} = ${c.max_hp != null ? c.max_hp * c.members.length : '—'}</span>
+           </span>`
+        : `<input type="number" class="init-input" value="${c.max_hp ?? ''}" placeholder="—"
+             onchange="setStat('${id}', 'max_hp', this.value)" style="width:56px"
+             title="Edit Max HP (not saved to Excel)">`
+      }</td>
       <td><input type="number" class="init-input" value="${c.initiative ?? ''}" placeholder="—"
-           onchange="setInit('${id}', this.value)" style="width:55px"></td>
+           onchange="setInit('${id}', this.value)" style="width:48px"></td>
       <td>${c.initiative_mod >= 0 ? '+' : ''}${c.initiative_mod}</td>
-      <td>${c.initiative_mode}</td>
+      <td style="white-space:nowrap">${c.initiative_mode}</td>
     </tr>`;
   }
   html += '</tbody></table>';

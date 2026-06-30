@@ -166,6 +166,7 @@ def load_creature_sheet(wb: openpyxl.Workbook, tab_name: str) -> dict:
         "speed": c("B9"),
         "proficiency_bonus": ci("B10") or 0,
         "initiative_mod": ci("B11") or 0,
+        "cr": c("B12"),   # Challenge Rating — "1/4", "1/2", "1", "5", etc.; "" if blank
         "attacks_per_round": ci("K2") or 1,
     }
 

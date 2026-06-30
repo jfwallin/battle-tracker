@@ -7,6 +7,36 @@ place to look for how the app actually works today. Companion: the
 
 ---
 
+## Status snapshot
+
+**Built & tested** (65 passing unit tests):
+
+- **Core tracker** — initiative/turns, log-derived HP, single attacks, AoE spells, group attacks
+  (batch/mob/average), conditions, limited-use, hazards/events, Excel export.
+- **Stage 1 — Workspace + Battle Library**: remembered workspace dir, cross-workbook battle
+  loading, battle picker, validation.
+- **Stage 2 — Battle Builder**: in-app create/edit/duplicate/delete battles with a source picker.
+- **Stage 3 — Game Data**: party profiles, reusable **variants**, recurring NPCs.
+- **Stage 4 — Battle Report** (report slice): hit/miss/save logging + Scorecard + Detailed Log +
+  player-safe export; group-volley hit counts.
+- **Live-play features & fixes**: enemy status strip, group HP-bar math, batch crits, batch
+  per-attacker rolls + Shield AC-recount, **split a group's volley across multiple targets**,
+  editable AC/HP on the roster, heal self/NPCs, mass heal, `+`-sum damage entry, AC-annotated
+  target menus.
+
+**Remaining / deferred:**
+
+- **Stage 5 (advanced tools):** reinforcement waves, triggered events (the Trigger column),
+  phase transitions, morale/retreat, environmental initiative turns, encounter-balance summaries,
+  in-app library manager, persistent NPC updates after battle.
+- **Save & clone:** "save current encounter as a new battle" (survivors → prepared battle) and
+  named encounter snapshots (today there's only the single autosave/resume).
+- **Reporting edge:** a group attacking *another group* logs per-member damage events, so its
+  volley isn't summarized as one "N hit" line; reactions/bonus/legendary actions aren't yet
+  first-class logged events.
+
+---
+
 ## 1. Purpose
 
 A local, single-user web app that runs a D&D 5e combat encounter loaded from an Excel
@@ -48,7 +78,7 @@ encounter-engine/
   static/  (style.css, app.js, dice_roller.js)
   data/    (encounter_state.json, workspace.json)   # the .xlsx workbooks live in the chosen workspace dir, not here
   tests/   (pytest: loader, loader_refactor, dice, combat, workspace, battle_library, battle_builder,
-            game_data, variants, recurring_npcs, battle_report; make_sample_library.py)
+            game_data, variants, recurring_npcs, battle_report, group_split; make_sample_library.py)
   DESIGN.md, MONSTER_CARD_TEMPLATE.md, Encounter Engine Expansion.md
 ```
 
@@ -178,11 +208,14 @@ Three modes, explained inline in the modal:
 ### Banner & enemy status strip
 - The encounter banner shows Round, current turn, next up, and enemy summary (count / total HP /
   attack pool), with the always-visible **Next Turn** button.
-- A sticky **enemy status strip** under the banner shows one pill per NPC — green (active) /
+- An **enemy status strip** sits directly under the banner with one pill per NPC — green (active) /
   yellow (bloodied) / red+struck (down) with current/max HP, groups showing alive/total members.
-  The header reads "Enemies up X/Y" and flips to a green **"✓ ALL ENEMIES DOWN"** when the last
-  one falls (so you don't keep taking turns after the fight's over). HP bar math uses
-  `effectiveMaxHp` = `max_hp × member count` for groups, so the bar/label can't disagree.
+  It reads "Enemies up X/Y" and flips to a green **"✓ ALL ENEMIES DOWN"** when the last one falls
+  (so you don't keep taking turns after the fight's over). HP bar math uses `effectiveMaxHp` =
+  `max_hp × member count` for groups, so the bar/label can't disagree.
+- Layout: the encounter page is a fixed-height **flex column** — banner + strip form one
+  `.encounter-header` pinned at the top, and `.encounter-layout` (cards + right rail) fills the rest
+  and scrolls internally. So the header is always visible and never overlaps the content.
 
 ### Battle Report (Stage 4 of the expansion, report slice)
 
@@ -326,10 +359,11 @@ autosaves, and returns the enriched JSON.
   loader; and the roster preview (inline-editable AC/Max HP/initiative) → initiative → Start flow.
 - **encounter.html** — the dashboard: banner + **enemy status strip**, then the combatant cards.
   Card renderers: `renderPCCard`, `renderMonsterCard`, `renderGroupCard`, `renderMemberRow`.
-  Modals: attack, group-attack (batch chips + AC recount), condition, stat-block, AoE, Mass Heal,
-  dice-roller. Shared helpers: `healTargetsFor`/`healTargetOptions`, `dmgTargetOptions` (AC-annotated),
-  `parseAmount`, `effectiveMaxHp`, `escHtml`/`escJs`, `renderDamageResult`, `exportReport`. State
-  lives in `ENC` (the last fetched encounter); every mutation re-fetches and re-renders.
+  Modals: attack, group-attack (split across targets, per-segment batch chips + AC recount),
+  condition, stat-block, AoE, Mass Heal, dice-roller. Shared helpers: `healTargetsFor`/
+  `healTargetOptions`, `dmgTargetOptions` (AC-annotated), `parseAmount`, `effectiveMaxHp`,
+  `escHtml`/`escJs`, `renderDamageResult`, `exportReport`. State lives in `ENC` (the last fetched
+  encounter); every mutation re-fetches and re-renders.
 
 ## 8. Persistence & Excel I/O
 
@@ -360,6 +394,11 @@ autosaves, and returns the enriched JSON.
 - **Close companion workbooks before saving.** Saving a battle/profile/variant/recurring-NPC (or
   a report to an open file) fails with HTTP 423 if `Battle_Library.xlsx` / `Game_Data.xlsx` (or
   the target) is open in Excel. The UI surfaces a "close it and retry" message.
+- **Repo hygiene (Windows/Git).** A root `.gitignore` excludes Python caches, Excel lock files
+  (`~$*`, which otherwise cause "Permission denied" on `git add`), and generated report exports
+  (`battle_repor*.xlsx`). A root `.gitattributes` marks `*.xlsx` **binary** so line-ending
+  conversion never corrupts the workbooks. The `LF will be replaced by CRLF` messages from
+  `core.autocrlf=true` are harmless warnings.
 
 ## 10. Non-goals (unchanged from v1)
 
